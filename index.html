@@ -218,6 +218,192 @@ async function onSubmit(e) {
   });
 
   if (error || !data || !data[0]) {
+    console.error('Booking error:', error);
+    errorEl.textContent = 'שגיאה: ' + (error ? (error.message || JSON.stringify(error)) : 'תשובה ריקה מהשרת');
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'שריינו לי שולחן';
+    return;
+  }
+
+  const result = data[0].result;
+
+  if (result === 'confirmed') {
+    if (email) {
+      db.functions.invoke('send-confirmation', {
+        body: { email, name, date: today, time, guests }
+      }).catch(() => {}); // לא חוסם את מסך האישור אם המייל נכשל
+    }
+    const waText = encodeURIComponent(
+      `אישור הזמנה - ${BUSINESS_NAME}\n${name}, שולחן ל-${guests} סועדים\nהיום ${todayDisplay} בשעה ${time}`
+    );
+    app.innerHTML = `
+      <div class="success">
+        <h2>ההזמנה שלך אושרה!</h2>
+        <p>${name}, שולחן ל-${guests} סועדים בשעה ${time}.</p>
+        <p>מצפים לראותכם ✳</p>
+      </div>
+      <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none;">
+        <button type="button" style="background:#25D366; margin-bottom:10px;">שליחה לוואטסאפ שלי</button>
+      </a>
+      <button type="button" id="icsBtn" style="background:var(--card); color:var(--accent); border:1px solid var(--accent);">הוספה ליומן</button>
+    `;
+    document.getElementById('icsBtn').addEventListener('click', () => downloadIcs(time, guests));
+  } else if (result === 'full') {
+    app.innerHTML = `
+      <div class="full-msg">
+        <p>לצערנו התמלאנו בדיוק עכשיו.</p>
+        <p style="color:var(--muted); font-size:14px;">אפשר לנסות להגיע ולבדוק זמינות במקום.</p>
+      </div>`;
+  } else if (result === 'closed') {
+    app.innerHTML = `<div class="full-msg"><p>ההזמנות המקוונות ליום היום נסגרו.</p></div>`;
+  } else {
+    errorEl.textContent = 'שעה לא תקינה, נסו שוב.';
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'שריינו לי שולחן';
+  }
+}
+
+function downloadIcs(time, guests) {
+  const [h, m] = time.split(':');
+  const dt = today.replace(/-/g, '') + 'T' + h + m + '00';
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `DTSTART:${dt}`,
+    `SUMMARY:הזמנה ל-${BUSINESS_NAME} (${guests} סועדים)`,
+    'DESCRIPTION:אישור הזמנת שולחן',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'reservation.ics';
+  link.click();
+}
+
+init();
+</script>
+</body>
+</html>  const [eh, em] = end.split(':').map(Number);
+  while (h < eh || (h === eh && m <= em)) {
+    opts.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    m += 15;
+    if (m >= 60) { m = 0; h += 1; }
+  }
+  return opts;
+}
+
+async function init() {
+  const { data: settingsRows } = await db.from('settings')
+    .select('key,value').in('key', ['arrival_start','arrival_end','booking_cutoff']);
+  const settings = Object.fromEntries((settingsRows || []).map(r => [r.key, r.value]));
+  const start = settings.arrival_start || '17:00';
+  const end = settings.arrival_end || '21:00';
+  const cutoff = settings.booking_cutoff || '17:00';
+
+  const nowTime = new Date().toTimeString().slice(0,5);
+  if (nowTime > cutoff) {
+    app.innerHTML = `
+      <h1>${BUSINESS_NAME}</h1>
+      <div class="full-msg">
+        <p>ההזמנות המקוונות ליום ${todayDisplay} נסגרו.</p>
+        <p style="color:var(--muted); font-size:14px;">ניתן להתקשר אלינו לבירור זמינות.</p>
+      </div>`;
+    return;
+  }
+
+  const { data: spotsData } = await db.rpc('available_spots', { p_date: today });
+  const spots = typeof spotsData === 'number' ? spotsData : 0;
+
+  if (spots <= 0) {
+    app.innerHTML = `
+      <h1>${BUSINESS_NAME}</h1>
+      <div class="full-msg">
+        <p>אין מקומות פנויים להזמנה מראש הערב.</p>
+        <p style="color:var(--muted); font-size:14px;">אפשר לנסות להגיע ולבדוק זמינות במקום.</p>
+      </div>`;
+    return;
+  }
+
+  const times = timeOptions(start, end);
+  app.innerHTML = `
+    <h1>${BUSINESS_NAME}</h1>
+    <p class="sub">היום, ${todayDisplay}</p>
+    <div class="status ok">נותרו ${spots} מקומות פנויים הערב</div>
+    <form id="bookingForm">
+      <div class="field">
+        <label for="time">שעת הגעה</label>
+        <select id="time" required>
+          ${times.map(t => `<option value="${t}">${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label for="name">שם מלא</label>
+        <input id="name" type="text" placeholder="ישראל ישראלי" required>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="phone">טלפון</label>
+          <input id="phone" type="tel" placeholder="050-0000000" required>
+        </div>
+        <div class="field">
+          <label for="guests">כמות סועדים</label>
+          <input id="guests" type="number" min="1" max="10" value="2" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">הערה (לא חובה)</label>
+        <textarea id="note" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק..."></textarea>
+      </div>
+      <div class="field">
+        <label for="email">אימייל לאישור (לא חובה)</label>
+        <input id="email" type="email" placeholder="name@example.com">
+      </div>
+      <div id="formError" class="error" style="display:none;"></div>
+      <button type="submit" id="submitBtn">שריינו לי שולחן</button>
+    </form>
+  `;
+
+  document.getElementById('bookingForm').addEventListener('submit', onSubmit);
+}
+
+async function onSubmit(e) {
+  e.preventDefault();
+  const errorEl = document.getElementById('formError');
+  const btn = document.getElementById('submitBtn');
+  errorEl.style.display = 'none';
+
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const guests = parseInt(document.getElementById('guests').value, 10);
+  const time = document.getElementById('time').value;
+  const note = document.getElementById('note').value.trim();
+  const email = document.getElementById('email').value.trim();
+
+  if (!name || !phone || !guests || guests < 1) {
+    errorEl.textContent = 'נא למלא שם, טלפון וכמות סועדים תקינה.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  const { data, error } = await db.rpc('book_reservation', {
+    p_date: today,
+    p_time: time,
+    p_name: name,
+    p_phone: phone,
+    p_guests: guests,
+    p_note: note || null,
+    p_email: email || null
+  });
+
+  if (error || !data || !data[0]) {
     errorEl.textContent = 'אירעה שגיאה. נסו שוב או התקשרו אלינו.';
     errorEl.style.display = 'block';
     btn.disabled = false;
