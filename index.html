@@ -96,8 +96,16 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const app = document.getElementById('app');
-const today = new Date().toISOString().slice(0, 10);
-const todayDisplay = new Date().toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+const BOOKING_WINDOW_DAYS = 30; // עד כמה ימים קדימה אפשר להזמין
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDisplay(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+}
 
 function timeOptions(start, end) {
   const opts = [];
@@ -111,43 +119,90 @@ function timeOptions(start, end) {
   return opts;
 }
 
-async function init() {
+let cachedSettings = null;
+
+async function getSettings() {
+  if (cachedSettings) return cachedSettings;
   const { data: settingsRows } = await db.from('settings')
     .select('key,value').in('key', ['arrival_start','arrival_end','booking_cutoff']);
   const settings = Object.fromEntries((settingsRows || []).map(r => [r.key, r.value]));
-  const start = settings.arrival_start || '17:00';
-  const end = settings.arrival_end || '21:00';
-  const cutoff = settings.booking_cutoff || '17:00';
+  cachedSettings = {
+    start: settings.arrival_start || '17:00',
+    end: settings.arrival_end || '21:00',
+    cutoff: settings.booking_cutoff || '17:00'
+  };
+  return cachedSettings;
+}
 
+function defaultBookableDate(settings) {
+  const now = todayStr();
   const nowTime = new Date().toTimeString().slice(0,5);
-  if (nowTime > cutoff) {
-    app.innerHTML = `
-      <h1>${BUSINESS_NAME}</h1>
-      <div class="full-msg">
-        <p>ההזמנות המקוונות ליום ${todayDisplay} נסגרו.</p>
-        <p style="color:var(--muted); font-size:14px;">ניתן להתקשר אלינו לבירור זמינות.</p>
-      </div>`;
-    return;
+  if (nowTime > settings.cutoff) {
+    const d = new Date(now + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+  return now;
+}
+
+function dateInputBounds() {
+  const min = new Date();
+  const max = new Date();
+  max.setDate(max.getDate() + BOOKING_WINDOW_DAYS);
+  return { min: min.toISOString().slice(0,10), max: max.toISOString().slice(0,10) };
+}
+
+async function init() {
+  const settings = await getSettings();
+  const initialDate = defaultBookableDate(settings);
+  const { min, max } = dateInputBounds();
+
+  app.innerHTML = `
+    <h1>${BUSINESS_NAME}</h1>
+    <div class="field">
+      <label for="date">תאריך</label>
+      <input id="date" type="date" value="${initialDate}" min="${min}" max="${max}">
+    </div>
+    <div id="dateContent">טוען...</div>
+  `;
+
+  const dateInput = document.getElementById('date');
+  dateInput.addEventListener('change', () => renderForDate(dateInput.value, settings));
+  renderForDate(initialDate, settings);
+}
+
+async function renderForDate(dateStr, settings) {
+  const content = document.getElementById('dateContent');
+  content.innerHTML = 'טוען...';
+
+  const isToday = dateStr === todayStr();
+  if (isToday) {
+    const nowTime = new Date().toTimeString().slice(0,5);
+    if (nowTime > settings.cutoff) {
+      content.innerHTML = `
+        <div class="full-msg">
+          <p>ההזמנות המקוונות ליום ${formatDisplay(dateStr)} נסגרו.</p>
+          <p style="color:var(--muted); font-size:14px;">ניתן להתקשר אלינו לבירור זמינות, או לבחור תאריך אחר למעלה.</p>
+        </div>`;
+      return;
+    }
   }
 
-  const { data: spotsData } = await db.rpc('available_spots', { p_date: today });
+  const { data: spotsData } = await db.rpc('available_spots', { p_date: dateStr });
   const spots = typeof spotsData === 'number' ? spotsData : 0;
 
   if (spots <= 0) {
-    app.innerHTML = `
-      <h1>${BUSINESS_NAME}</h1>
+    content.innerHTML = `
       <div class="full-msg">
-        <p>אין מקומות פנויים להזמנה מראש הערב.</p>
-        <p style="color:var(--muted); font-size:14px;">אפשר לנסות להגיע ולבדוק זמינות במקום.</p>
+        <p>אין מקומות פנויים להזמנה מראש בתאריך ${formatDisplay(dateStr)}.</p>
+        <p style="color:var(--muted); font-size:14px;">אפשר לנסות תאריך אחר.</p>
       </div>`;
     return;
   }
 
-  const times = timeOptions(start, end);
-  app.innerHTML = `
-    <h1>${BUSINESS_NAME}</h1>
-    <p class="sub">היום, ${todayDisplay}</p>
-    <div class="status ok">נותרו ${spots} מקומות פנויים הערב</div>
+  const times = timeOptions(settings.start, settings.end);
+  content.innerHTML = `
+    <div class="status ok">נותרו ${spots} מקומות פנויים ב-${formatDisplay(dateStr)}</div>
     <form id="bookingForm">
       <div class="field">
         <label for="time">שעת הגעה</label>
@@ -182,10 +237,10 @@ async function init() {
     </form>
   `;
 
-  document.getElementById('bookingForm').addEventListener('submit', onSubmit);
+  document.getElementById('bookingForm').addEventListener('submit', (e) => onSubmit(e, dateStr));
 }
 
-async function onSubmit(e) {
+async function onSubmit(e, dateStr) {
   e.preventDefault();
   const errorEl = document.getElementById('formError');
   const btn = document.getElementById('submitBtn');
@@ -208,7 +263,7 @@ async function onSubmit(e) {
   btn.textContent = 'שולח...';
 
   const { data, error } = await db.rpc('book_reservation', {
-    p_date: today,
+    p_date: dateStr,
     p_time: time,
     p_name: name,
     p_phone: phone,
@@ -231,16 +286,16 @@ async function onSubmit(e) {
   if (result === 'confirmed') {
     if (email) {
       db.functions.invoke('send-confirmation', {
-        body: { email, name, date: today, time, guests }
+        body: { email, name, date: dateStr, time, guests }
       }).catch(() => {}); // לא חוסם את מסך האישור אם המייל נכשל
     }
     const waText = encodeURIComponent(
-      `אישור הזמנה - ${BUSINESS_NAME}\n${name}, שולחן ל-${guests} סועדים\nהיום ${todayDisplay} בשעה ${time}`
+      `אישור הזמנה - ${BUSINESS_NAME}\n${name}, שולחן ל-${guests} סועדים\n${formatDisplay(dateStr)} בשעה ${time}`
     );
     app.innerHTML = `
       <div class="success">
         <h2>ההזמנה שלך אושרה!</h2>
-        <p>${name}, שולחן ל-${guests} סועדים בשעה ${time}.</p>
+        <p>${name}, שולחן ל-${guests} סועדים, ${formatDisplay(dateStr)} בשעה ${time}.</p>
         <p>מצפים לראותכם ✳</p>
       </div>
       <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none;">
@@ -248,15 +303,15 @@ async function onSubmit(e) {
       </a>
       <button type="button" id="icsBtn" style="background:var(--card); color:var(--accent); border:1px solid var(--accent);">הוספה ליומן</button>
     `;
-    document.getElementById('icsBtn').addEventListener('click', () => downloadIcs(time, guests));
+    document.getElementById('icsBtn').addEventListener('click', () => downloadIcs(dateStr, time, guests));
   } else if (result === 'full') {
-    app.innerHTML = `
+    document.getElementById('dateContent').innerHTML = `
       <div class="full-msg">
         <p>לצערנו התמלאנו בדיוק עכשיו.</p>
-        <p style="color:var(--muted); font-size:14px;">אפשר לנסות להגיע ולבדוק זמינות במקום.</p>
+        <p style="color:var(--muted); font-size:14px;">אפשר לנסות תאריך אחר.</p>
       </div>`;
   } else if (result === 'closed') {
-    app.innerHTML = `<div class="full-msg"><p>ההזמנות המקוונות ליום היום נסגרו.</p></div>`;
+    document.getElementById('dateContent').innerHTML = `<div class="full-msg"><p>ההזמנות המקוונות לתאריך הזה נסגרו.</p></div>`;
   } else {
     errorEl.textContent = 'שעה לא תקינה, נסו שוב.';
     errorEl.style.display = 'block';
@@ -265,9 +320,9 @@ async function onSubmit(e) {
   }
 }
 
-function downloadIcs(time, guests) {
+function downloadIcs(dateStr, time, guests) {
   const [h, m] = time.split(':');
-  const dt = today.replace(/-/g, '') + 'T' + h + m + '00';
+  const dt = dateStr.replace(/-/g, '') + 'T' + h + m + '00';
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
