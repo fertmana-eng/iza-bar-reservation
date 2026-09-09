@@ -93,21 +93,44 @@
 <!-- =================================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const app = document.getElementById('app');
-const today = new Date().toISOString().slice(0, 10);
-const todayDisplay = new Date().toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDisplay(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+let currentDate = todayStr();
+
+async function renderShell() {
+  app.innerHTML = `
+    <div class="field" style="margin-bottom:16px;">
+      <input id="dateInput" type="date" value="${currentDate}">
+    </div>
+    <div id="listContent">טוען...</div>
+  `;
+  document.getElementById('dateInput').addEventListener('change', (e) => {
+    currentDate = e.target.value;
+    renderList();
+  });
+  renderList();
+}
 
 async function renderList() {
-  app.innerHTML = `<p>טוען הזמנות...</p>`;
+  const content = document.getElementById('listContent');
+  content.innerHTML = `<p>טוען הזמנות...</p>`;
 
   const { data: tables } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
   const { data: reservations } = await db
     .from('reservations')
     .select('id,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status')
-    .eq('reservation_date', today)
+    .eq('reservation_date', currentDate)
     .eq('status', 'confirmed')
     .order('arrival_time');
 
@@ -124,7 +147,7 @@ async function renderList() {
   });
 
   let html = `
-    <h1>הזמנות להיום · ${todayDisplay}</h1>
+    <h1>הזמנות ל-${formatDisplay(currentDate)}</h1>
     <div class="summary">${(reservations || []).length} הזמנות · ${totalGuests} סועדים</div>
   `;
 
@@ -146,10 +169,10 @@ async function renderList() {
   }
 
   if (!(reservations || []).length) {
-    html += `<div class="card"><p style="color:var(--muted); text-align:center;">אין הזמנות עדיין להיום.</p></div>`;
+    html += `<div class="card"><p style="color:var(--muted); text-align:center;">אין הזמנות בתאריך הזה.</p></div>`;
   }
 
-  app.innerHTML = html;
+  content.innerHTML = html;
   document.querySelectorAll('.cancel-link').forEach(el => {
     el.addEventListener('click', async () => {
       if (!confirm('לבטל את ההזמנה הזו?')) return;
@@ -160,7 +183,7 @@ async function renderList() {
   });
 }
 
-renderList();
+renderShell();
 </script>
 </body>
 </html>
