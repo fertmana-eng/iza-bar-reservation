@@ -4,83 +4,246 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>הזמנת שולחן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1f1e1c;
-    --muted: #6b6862;
-    --bg: #f6f4ef;
-    --card: #ffffff;
-    --border: #e4e0d6;
-    --accent: #2f4a3d;
-    --accent-light: #eaf1ec;
-    --danger: #7a2e2e;
-    --danger-light: #f7eaea;
+    --paper: #f0e8d0;
+    --paper-muted: rgba(240,232,208,0.62);
+    --ink: #1c1610;
+    --ink-soft: #5a4f3c;
+    --line: rgba(28,22,16,0.28);
+    --muted: rgba(28,22,16,0.55);
+    --field-bg: rgba(28,22,16,0.05);
+    --field-border: rgba(28,22,16,0.24);
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
   body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    background: var(--bg);
+    font-family: 'Heebo', -apple-system, sans-serif;
+    background: var(--paper);
     color: var(--ink);
-    display: flex;
-    justify-content: center;
-    padding: 24px 16px 60px;
+    min-height: 100vh;
   }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px 20px;
-    max-width: 420px;
-    width: 100%;
-  }
-  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; text-align: center; }
-  .sub { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 20px; }
-  .status {
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 14px;
-    margin-bottom: 20px;
+  .header-band {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--ink);
+    padding: 18px 20px 15px;
     text-align: center;
   }
-  .status.ok { background: var(--accent-light); color: var(--accent); }
-  .status.warn { background: var(--danger-light); color: var(--danger); }
-  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-  .field { margin-bottom: 16px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  input, select, textarea {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 15px;
+  .page { max-width: 400px; width: 100%; margin: 0 auto; padding: 28px 20px 64px; }
+
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+  }
+  .venue-name {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 900;
+    font-size: 26px;
+    color: var(--paper);
+    margin: 0;
+  }
+  .slash-big {
+    font-weight: 900;
+    font-size: 26px;
+    color: var(--paper);
+  }
+  .venue-tag {
+    color: var(--paper-muted);
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .progress {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 10px;
+    margin: 16px 0 32px;
+    font-size: 11.5px;
+  }
+  .progress:empty { margin: 0; }
+  .step-chip { color: var(--muted); }
+  .step-chip.current { color: var(--ink); font-weight: 900; font-size: 17px; }
+  button.step-chip.done {
+    all: unset;
+    color: var(--ink-soft);
+    font-size: inherit;
     font-family: inherit;
-    background: #fff;
+    cursor: pointer;
+    border-bottom: 1px dashed var(--ink-soft);
+    padding-bottom: 1px;
+  }
+  .step-sep { color: var(--field-border); font-size: 10px; margin: 0 -3px; }
+
+  .summary-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 18px; align-items: baseline; }
+  .chip-btn {
+    all: unset;
+    color: var(--ink-soft);
+    font-size: 13px;
+    border-bottom: 1px dashed var(--ink-soft);
+    cursor: pointer;
+    padding-bottom: 1px;
+  }
+  .chip-sep { color: var(--muted); font-size: 12px; }
+  .summary-box {
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--line);
+    padding: 14px 0;
+    margin: 18px 0 26px;
+  }
+  .summary-row {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 0;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: 'Heebo', sans-serif;
+  }
+  .summary-label { color: var(--ink-soft); }
+  .summary-value { font-weight: 600; }
+
+  .intro-copy { margin: 20px 0 26px; }
+  .intro-copy p {
+    font-size: 15.5px;
+    line-height: 1.65;
+    text-align: center;
+    color: var(--ink);
+    margin: 0 0 14px;
+  }
+  .intro-copy p:last-child { margin-bottom: 0; }
+  .intro-subtitle { color: var(--ink); font-size: 21px; font-weight: 700; margin: 2px 0 24px; }
+
+  .step-label { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin: 0 0 6px; }
+  .step-question { font-size: 21px; font-weight: 700; margin: 0 0 24px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field { margin-bottom: 18px; }
+
+  input, textarea {
+    width: 100%;
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 4px;
+    padding: 13px 14px;
+    font-size: 17px;
+    font-family: inherit;
     color: var(--ink);
   }
+  input::placeholder, textarea::placeholder { color: rgba(28,22,16,0.32); }
+  input:focus, textarea:focus { outline: none; border-color: var(--ink); }
   textarea { resize: none; }
-  button {
+
+  button.primary {
     width: 100%;
-    background: var(--accent);
-    color: #fff;
-    border: none;
     height: 46px;
-    border-radius: 10px;
-    font-size: 15px;
+    border-radius: 8px;
+    font-size: 15.5px;
     font-weight: 600;
+    font-family: 'Heebo', sans-serif;
     cursor: pointer;
-    margin-top: 4px;
+    margin-top: 8px;
+    border: none;
+    background: var(--ink);
+    color: var(--paper);
   }
-  button:disabled { opacity: 0.6; cursor: default; }
-  .error { color: var(--danger); font-size: 13px; margin-top: 6px; }
-  .success { text-align: center; padding: 20px 0; }
-  .success h2 { font-size: 18px; margin-bottom: 8px; }
-  .success p { color: var(--muted); font-size: 14px; }
-  .full-msg { text-align: center; padding: 30px 0; }
+  button.primary:disabled { opacity: 0.45; }
+  .skip-link {
+    display: block;
+    text-align: center;
+    background: none; border: none;
+    color: var(--ink-soft); font-size: 14px; font-family: inherit;
+    margin-top: 14px; cursor: pointer;
+  }
+
+  /* Calendar */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-month { font-weight: 700; font-size: 17px; }
+  .cal-nav { background: none; border: none; color: var(--ink); font-size: 20px; padding: 4px 10px; cursor: pointer; }
+  .cal-nav:disabled { color: var(--field-border); cursor: default; }
+  .cal-weekdays, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-weekdays div { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding-bottom: 8px; }
+  .cal-grid button {
+    all: unset; box-sizing: border-box; width: 100%; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--ink); border-radius: 50%; cursor: pointer;
+  }
+  .cal-grid button:disabled { color: rgba(28,22,16,0.22); cursor: default; }
+  .cal-grid button.today { border: 1px solid var(--ink-soft); }
+  .cal-grid button.selected { background: var(--ink); color: var(--paper); font-weight: 700; }
+
+  .warning { color: #8a3f22; font-size: 14px; margin-top: 16px; text-align: center; }
+
+  /* Time picker */
+  .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .time-grid button {
+    all: unset; box-sizing: border-box; text-align: center; padding: 13px 0;
+    border: 1px solid var(--field-border); border-radius: 4px;
+    font-size: 15px; color: var(--ink); cursor: pointer;
+  }
+  .time-grid button.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* Guests stepper */
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 10px; }
+  .stepper button {
+    all: unset; width: 46px; height: 46px; border-radius: 50%;
+    border: 1px solid var(--field-border); display: flex; align-items: center; justify-content: center;
+    font-size: 22px; cursor: pointer;
+  }
+  .stepper-value { font-size: 32px; font-weight: 700; min-width: 50px; text-align: center; }
+  .stepper button:disabled { opacity: 0.3; cursor: default; }
+  .hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+
+  .error { color: #8a3f22; font-size: 13px; margin-top: 8px; }
+
+  .full-msg { text-align: center; padding: 4px 0; }
+  .full-msg p:first-child { font-size: 17px; margin-bottom: 8px; }
+  .full-msg p:last-child { color: var(--muted); font-size: 14px; }
+
+  .success { text-align: center; padding: 8px 0 28px; }
+  .success h2 { font-family: 'Heebo', sans-serif; font-weight: 900; font-size: 24px; margin: 0 0 10px; }
+  .success p { font-size: 15px; margin: 4px 0; }
+  .success p.muted { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  .btn-outline {
+    width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 600;
+    font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px;
+    background: transparent; color: var(--ink); border: 1px solid var(--field-border);
+  }
+  .btn-whatsapp {
+    width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 700;
+    font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 4px;
+    background: #2fae60; color: #fff; border: none;
+  }
 </style>
 </head>
 <body>
-<div class="card" id="app">טוען...</div>
+<div class="header-band">
+  <div class="title-row">
+    <h1 class="venue-name" id="venueName">עיזה בר</h1>
+    <span class="slash-big">//</span>
+    <span class="venue-tag">הזמנת מקומות</span>
+  </div>
+</div>
+<div class="page" id="page">
+  <div class="progress" id="progress"></div>
+  <div id="stepArea"><p style="text-align:center; color:var(--muted);">טוען...</p></div>
+</div>
 
 <!-- ================= CONFIGURATION ================= -->
 <script>
@@ -95,18 +258,29 @@
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const app = document.getElementById('app');
-const BOOKING_WINDOW_DAYS = 30; // עד כמה ימים קדימה אפשר להזמין
+document.getElementById('venueName').textContent = BUSINESS_NAME;
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+const stepArea = document.getElementById('stepArea');
+const progressEl = document.getElementById('progress');
+const BOOKING_WINDOW_DAYS = 30;
+const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
+const STEPS = ['date', 'guests', 'time', 'details', 'extra'];
+const STEP_LABELS = { date: 'תאריך', guests: 'סועדים', time: 'שעה', details: 'פרטים', extra: 'סיום' };
 
+let stepIndex = 0;
+let pageSettings = null;
+let viewMonth, minDate, maxDate;
+let dateWarning = null;
+let guestsWarning = null;
+
+const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '', email: '' };
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function toDateStr(d) { return d.toISOString().slice(0, 10); }
 function formatDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
 }
-
 function timeOptions(start, end) {
   const opts = [];
   let [h, m] = start.split(':').map(Number);
@@ -119,163 +293,373 @@ function timeOptions(start, end) {
   return opts;
 }
 
-let cachedSettings = null;
-
 async function getSettings() {
-  if (cachedSettings) return cachedSettings;
   const { data: settingsRows } = await db.from('settings')
     .select('key,value').in('key', ['arrival_start','arrival_end','booking_cutoff']);
   const settings = Object.fromEntries((settingsRows || []).map(r => [r.key, r.value]));
-  cachedSettings = {
+  return {
     start: settings.arrival_start || '17:00',
     end: settings.arrival_end || '21:00',
     cutoff: settings.booking_cutoff || '17:00'
   };
-  return cachedSettings;
 }
 
-function defaultBookableDate(settings) {
-  const now = todayStr();
-  const nowTime = new Date().toTimeString().slice(0,5);
-  if (nowTime > settings.cutoff) {
-    const d = new Date(now + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+function stepValueText(s) {
+  if (s === 'date' && formData.date) return formatDisplay(formData.date);
+  if (s === 'time' && formData.time) return formData.time;
+  if (s === 'guests') return formData.guests + ' סועדים';
+  if (s === 'details' && formData.name) return formData.name;
+  return null;
+}
+
+function renderProgress() {
+  progressEl.innerHTML = STEPS.map((s, i) => {
+    const state = i < stepIndex ? 'done' : i === stepIndex ? 'current' : 'upcoming';
+    const value = state === 'done' ? stepValueText(s) : null;
+    const label = value || STEP_LABELS[s];
+    return state === 'done'
+      ? `<button type="button" class="step-chip done" data-step="${i}">${label}</button>`
+      : `<span class="step-chip ${state}">${label}</span>`;
+  }).join('<span class="step-sep">›</span>');
+
+  progressEl.querySelectorAll('.step-chip.done').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
+  });
+}
+
+function goNext() {
+  if (stepIndex < STEPS.length - 1) { stepIndex++; renderStep(); }
+}
+function goToStep(i) {
+  stepIndex = i; renderStep();
+}
+
+function summaryParts() {
+  const parts = [];
+  for (let i = 0; i < stepIndex; i++) {
+    const s = STEPS[i];
+    if (s === 'date' && formData.date) parts.push({ text: formatDisplay(formData.date), step: i });
+    else if (s === 'time' && formData.time) parts.push({ text: formData.time, step: i });
+    else if (s === 'details') {
+      if (formData.name) parts.push({ text: formData.name, step: i });
+      if (formData.phone) parts.push({ text: formData.phone, step: i });
+    }
+    else if (s === 'guests') parts.push({ text: formData.guests + ' סועדים', step: i });
   }
-  return now;
+  return parts;
 }
-
-function dateInputBounds() {
-  const min = new Date();
-  const max = new Date();
-  max.setDate(max.getDate() + BOOKING_WINDOW_DAYS);
-  return { min: min.toISOString().slice(0,10), max: max.toISOString().slice(0,10) };
+function summaryHtml() {
+  const parts = summaryParts();
+  if (!parts.length) return '';
+  return `<div class="summary-chips">${parts.map((p, idx) =>
+    `<button type="button" class="chip-btn" data-step="${p.step}">${p.text}</button>${idx < parts.length - 1 ? '<span class="chip-sep">·</span>' : ''}`
+  ).join('')}</div>`;
+}
+function bindSummaryClicks() {
+  stepArea.querySelectorAll('.chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
+  });
 }
 
 async function init() {
-  const settings = await getSettings();
-  const initialDate = defaultBookableDate(settings);
-  const { min, max } = dateInputBounds();
+  pageSettings = await getSettings();
 
-  app.innerHTML = `
-    <h1>${BUSINESS_NAME}</h1>
-    <div class="field">
-      <label for="date">תאריך</label>
-      <input id="date" type="date" value="${initialDate}" min="${min}" max="${max}">
-    </div>
-    <div id="dateContent">טוען...</div>
-  `;
+  const minD = new Date(); minD.setHours(0,0,0,0);
+  const maxD = new Date(minD); maxD.setDate(maxD.getDate() + BOOKING_WINDOW_DAYS);
+  minDate = minD; maxDate = maxD;
 
-  const dateInput = document.getElementById('date');
-  dateInput.addEventListener('change', () => renderForDate(dateInput.value, settings));
-  renderForDate(initialDate, settings);
+  let initial = todayStr();
+  const nowTime = new Date().toTimeString().slice(0,5);
+  if (nowTime > pageSettings.cutoff) {
+    const d = new Date(initial + 'T00:00:00'); d.setDate(d.getDate() + 1);
+    initial = toDateStr(d);
+  }
+  viewMonth = new Date(new Date(initial + 'T00:00:00').getFullYear(), new Date(initial + 'T00:00:00').getMonth(), 1);
+
+  renderIntro();
 }
 
-async function renderForDate(dateStr, settings) {
-  const content = document.getElementById('dateContent');
-  content.innerHTML = 'טוען...';
+function renderIntro() {
+  progressEl.innerHTML = '';
+  stepArea.innerHTML = `
+    <p class="step-question" style="margin-bottom:4px;">איזה כיף שחשבתם עלינו 🙌</p>
+    <p class="intro-subtitle">רק כמה דברים לפני שמתחילים...</p>
+    <div class="intro-copy">
+      <p>הזמנת מקומות אצלנו בפנים בלבד, בין השעות <span dir="ltr" style="white-space:nowrap;">17:00–21:00</span>.</p>
+      <p>הישיבה בחוץ היא על בסיס מקום פנוי - אין אופציה להזמין מראש, פשוט מגיעים וממתינים שיתפנה שולחן 🙂</p>
+      <p>הזמנות לתאריך הנוכחי יתקבלו עד השעה 17:00.</p>
+      <p>נוכל לחכות למאחרים עד 15 דקות משעת ההזמנה - לאחר מכן לא נוכל להתחייב שהמקום ישמר לכם, עמכם הסליחה 🙏</p>
+      <p>קחו בבקשה בחשבון שבמידה והקדמתם, ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
+    </div>
+    <button type="button" class="primary" id="introNext">יאללה בואו נתחיל</button>
+  `;
+  document.getElementById('introNext').addEventListener('click', () => {
+    stepIndex = 0;
+    renderStep();
+  });
+}
 
-  const isToday = dateStr === todayStr();
+function renderStep() {
+  renderProgress();
+  const step = STEPS[stepIndex];
+  if (step === 'date') renderDateStep();
+  else if (step === 'time') renderTimeStep();
+  else if (step === 'details') renderDetailsStep();
+  else if (step === 'guests') renderGuestsStep();
+  else if (step === 'extra') renderExtraStep();
+}
+
+function renderDateStep() {
+  const monthLabel = viewMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+  const firstOfMonth = new Date(viewMonth);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
+  const prevMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1);
+  const nextMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
+  const prevDisabled = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 0) < minDate;
+  const nextDisabled = nextMonth > maxDate;
+
+  let cells = '';
+  for (let i = 0; i < startWeekday; i++) cells += '<div></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+    const dStr = toDateStr(d);
+    const disabled = d < minDate || d > maxDate;
+    const classes = [];
+    if (dStr === todayStr()) classes.push('today');
+    if (dStr === formData.date) classes.push('selected');
+    cells += `<button type="button" class="${classes.join(' ')}" data-date="${dStr}" ${disabled ? 'disabled' : ''}>${day}</button>`;
+  }
+
+  stepArea.innerHTML = `
+    <p class="step-question">מתי מגיעים?</p>
+    <div class="cal-head">
+      <button type="button" class="cal-nav" id="prevMonth" ${prevDisabled ? 'disabled' : ''}>‹</button>
+      <span class="cal-month">${monthLabel}</span>
+      <button type="button" class="cal-nav" id="nextMonth" ${nextDisabled ? 'disabled' : ''}>›</button>
+    </div>
+    <div class="cal-weekdays">${WEEKDAY_LETTERS.map(l => `<div>${l}</div>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+    ${dateWarning ? `<p class="warning">${dateWarning}</p>` : ''}
+    <button type="button" class="primary" id="dateNext" ${formData.date ? '' : 'disabled'}>לבחירת כמות סועדים</button>
+  `;
+
+  document.getElementById('prevMonth').addEventListener('click', () => { viewMonth = prevMonth; renderDateStep(); });
+  document.getElementById('nextMonth').addEventListener('click', () => { viewMonth = nextMonth; renderDateStep(); });
+  stepArea.querySelectorAll('.cal-grid button:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      dateWarning = null;
+      formData.date = btn.getAttribute('data-date');
+      renderDateStep();
+    });
+  });
+  document.getElementById('dateNext').addEventListener('click', checkDateAndContinue);
+}
+
+async function checkDateAndContinue() {
+  const dStr = formData.date;
+  const btn = document.getElementById('dateNext');
+  btn.disabled = true;
+  btn.textContent = 'בודק זמינות...';
+
+  const isToday = dStr === todayStr();
   if (isToday) {
     const nowTime = new Date().toTimeString().slice(0,5);
-    if (nowTime > settings.cutoff) {
-      content.innerHTML = `
-        <div class="full-msg">
-          <p>ההזמנות המקוונות ליום ${formatDisplay(dateStr)} נסגרו.</p>
-          <p style="color:var(--muted); font-size:14px;">ניתן להתקשר אלינו לבירור זמינות, או לבחור תאריך אחר למעלה.</p>
-        </div>`;
+    if (nowTime > pageSettings.cutoff) {
+      dateWarning = 'ההזמנות המקוונות ליום זה נסגרו. נסו תאריך אחר.';
+      formData.date = null;
+      renderDateStep();
       return;
     }
   }
-
-  const { data: spotsData } = await db.rpc('available_spots', { p_date: dateStr });
+  const { data: spotsData } = await db.rpc('available_spots', { p_date: dStr });
   const spots = typeof spotsData === 'number' ? spotsData : 0;
-
   if (spots <= 0) {
-    content.innerHTML = `
-      <div class="full-msg">
-        <p>אין מקומות פנויים להזמנה מראש בתאריך ${formatDisplay(dateStr)}.</p>
-        <p style="color:var(--muted); font-size:14px;">אפשר לנסות תאריך אחר.</p>
-      </div>`;
+    dateWarning = 'אין מקומות פנויים בתאריך הזה. נסו תאריך אחר.';
+    formData.date = null;
+    renderDateStep();
     return;
   }
-
-  const times = timeOptions(settings.start, settings.end);
-  content.innerHTML = `
-    <div class="status ok">נותרו ${spots} מקומות פנויים ב-${formatDisplay(dateStr)}</div>
-    <form id="bookingForm">
-      <div class="field">
-        <label for="time">שעת הגעה</label>
-        <select id="time" required>
-          ${times.map(t => `<option value="${t}">${t}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label for="name">שם מלא</label>
-        <input id="name" type="text" placeholder="ישראל ישראלי" required>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label for="phone">טלפון</label>
-          <input id="phone" type="tel" placeholder="050-0000000" required>
-        </div>
-        <div class="field">
-          <label for="guests">כמות סועדים</label>
-          <input id="guests" type="number" min="1" max="10" value="2" required>
-        </div>
-      </div>
-      <div class="field">
-        <label for="note">הערה (לא חובה)</label>
-        <textarea id="note" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק..."></textarea>
-      </div>
-      <div class="field">
-        <label for="email">אימייל לאישור (לא חובה)</label>
-        <input id="email" type="email" placeholder="name@example.com">
-      </div>
-      <div id="formError" class="error" style="display:none;"></div>
-      <button type="submit" id="submitBtn">שריינו לי שולחן</button>
-    </form>
-  `;
-
-  document.getElementById('bookingForm').addEventListener('submit', (e) => onSubmit(e, dateStr));
+  guestsWarning = null;
+  goNext();
 }
 
-async function onSubmit(e, dateStr) {
-  e.preventDefault();
-  const errorEl = document.getElementById('formError');
-  const btn = document.getElementById('submitBtn');
-  errorEl.style.display = 'none';
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+function minutesToTime(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
 
-  const name = document.getElementById('name').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const guests = parseInt(document.getElementById('guests').value, 10);
-  const time = document.getElementById('time').value;
-  const note = document.getElementById('note').value.trim();
-  const email = document.getElementById('email').value.trim();
+function renderTimeStep() {
+  if (!formData.time) formData.time = pageSettings.start;
+  const minMin = timeToMinutes(pageSettings.start);
+  const maxMin = timeToMinutes(pageSettings.end);
+  const curMin = timeToMinutes(formData.time);
 
-  if (!name || !phone || !guests || guests < 1) {
-    errorEl.textContent = 'נא למלא שם, טלפון וכמות סועדים תקינה.';
-    errorEl.style.display = 'block';
+  stepArea.innerHTML = `
+    <p class="step-question">באיזו שעה תרצו להגיע?</p>
+    <div class="stepper">
+      <button type="button" id="timeMinus" ${curMin <= minMin ? 'disabled' : ''}>−</button>
+      <span class="stepper-value" id="timeValue">${formData.time}</span>
+      <button type="button" id="timePlus" ${curMin >= maxMin ? 'disabled' : ''}>+</button>
+    </div>
+    <p class="hint">בין ${pageSettings.start} ל-${pageSettings.end}</p>
+    <button type="button" class="primary" id="timeNext">לפרטים האישיים</button>
+  `;
+  document.getElementById('timeMinus').addEventListener('click', () => {
+    const m = timeToMinutes(formData.time);
+    if (m > minMin) { formData.time = minutesToTime(m - 15); renderTimeStep(); }
+  });
+  document.getElementById('timePlus').addEventListener('click', () => {
+    const m = timeToMinutes(formData.time);
+    if (m < maxMin) { formData.time = minutesToTime(m + 15); renderTimeStep(); }
+  });
+  document.getElementById('timeNext').addEventListener('click', goNext);
+}
+
+function renderDetailsStep() {
+  stepArea.innerHTML = `
+    <p class="step-question">על איזה שם ומספר טלפון ההזמנה?</p>
+    <form id="detailsForm">
+      <div class="field">
+        <label for="nameInput">שם</label>
+        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" value="${formData.name}" required autofocus>
+      </div>
+      <div class="field">
+        <label for="phoneInput">טלפון</label>
+        <input id="phoneInput" type="tel" placeholder="050-0000000" value="${formData.phone}" required>
+      </div>
+      <div id="detailsError" class="error" style="display:none;"></div>
+      <button type="submit" class="primary">לסיכום ההזמנה</button>
+    </form>
+  `;
+  document.getElementById('detailsForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('nameInput').value.trim();
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!name || !phone) {
+      const err = document.getElementById('detailsError');
+      err.textContent = 'נא למלא שם וטלפון.';
+      err.style.display = 'block';
+      return;
+    }
+    formData.name = name;
+    formData.phone = phone;
+    goNext();
+  });
+}
+
+function renderGuestsStep() {
+  stepArea.innerHTML = `
+    <p class="step-question">כמה תהיו?</p>
+    <div class="stepper">
+      <button type="button" id="guestsMinus" ${formData.guests <= 1 ? 'disabled' : ''}>−</button>
+      <span class="stepper-value" id="guestsValue">${formData.guests}</span>
+      <button type="button" id="guestsPlus" ${formData.guests >= 10 ? 'disabled' : ''}>+</button>
+    </div>
+    <p class="hint">עד 10 סועדים</p>
+    <button type="button" class="primary" id="guestsNext">לבחירת שעה</button>
+    ${guestsWarning ? `<p class="warning">${guestsWarning}</p>` : ''}
+  `;
+  const valueEl = document.getElementById('guestsValue');
+  document.getElementById('guestsMinus').addEventListener('click', () => {
+    if (formData.guests > 1) { formData.guests--; renderGuestsStep(); }
+  });
+  document.getElementById('guestsPlus').addEventListener('click', () => {
+    if (formData.guests < 10) { formData.guests++; renderGuestsStep(); }
+  });
+  document.getElementById('guestsNext').addEventListener('click', checkGuestsAndContinue);
+}
+
+async function checkGuestsAndContinue() {
+  guestsWarning = null;
+  const btn = document.getElementById('guestsNext');
+  btn.disabled = true;
+  btn.textContent = 'בודק זמינות...';
+
+  const { data, error } = await db.rpc('check_availability', { p_date: formData.date, p_guests: formData.guests });
+
+  if (error) {
+    console.error('Availability check error:', error);
+    guestsWarning = 'שגיאה בבדיקת זמינות, נסו שוב.';
+    renderGuestsStep();
     return;
   }
 
+  if (!data) {
+    guestsWarning = 'אין מקום מתאים לקבוצה בגודל הזה בתאריך שבחרתם. נסו תאריך אחר או קבוצה קטנה יותר.';
+    renderGuestsStep();
+    return;
+  }
+
+  goNext();
+}
+
+function fullSummaryHtml() {
+  const rows = [
+    ['תאריך', formatDisplay(formData.date), STEPS.indexOf('date')],
+    ['שעה', formData.time, STEPS.indexOf('time')],
+    ['סועדים', formData.guests, STEPS.indexOf('guests')],
+    ['שם', formData.name, STEPS.indexOf('details')],
+    ['טלפון', formData.phone, STEPS.indexOf('details')]
+  ];
+  return `<div class="summary-box">${rows.map(([label, value, step]) =>
+    `<button type="button" class="summary-row" data-step="${step}"><span class="summary-label">${label}</span><span class="summary-value">${value}</span></button>`
+  ).join('')}</div>`;
+}
+function bindFullSummaryClicks() {
+  stepArea.querySelectorAll('.summary-row').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
+  });
+}
+
+function renderExtraStep() {
+  stepArea.innerHTML = `
+    <p class="step-question">פרטי ההזמנה</p>
+    ${fullSummaryHtml()}
+    <div class="field">
+      <label for="noteInput">הערה (לא חובה)</label>
+      <textarea id="noteInput" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${formData.note}</textarea>
+    </div>
+    <div class="field">
+      <label for="emailInput">אימייל לאישור (לא חובה)</label>
+      <input id="emailInput" type="email" placeholder="name@example.com" value="${formData.email}">
+    </div>
+    <div id="submitError" class="error" style="display:none;"></div>
+    <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
+  `;
+  bindFullSummaryClicks();
+  document.getElementById('submitBtn').addEventListener('click', submitBooking);
+}
+
+async function submitBooking() {
+  formData.note = document.getElementById('noteInput').value.trim();
+  formData.email = document.getElementById('emailInput').value.trim();
+
+  const btn = document.getElementById('submitBtn');
+  const errEl = document.getElementById('submitError');
+  errEl.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'שולח...';
 
   const { data, error } = await db.rpc('book_reservation', {
-    p_date: dateStr,
-    p_time: time,
-    p_name: name,
-    p_phone: phone,
-    p_guests: guests,
-    p_note: note || null,
-    p_email: email || null
+    p_date: formData.date,
+    p_time: formData.time,
+    p_name: formData.name,
+    p_phone: formData.phone,
+    p_guests: formData.guests,
+    p_note: formData.note || null,
+    p_email: formData.email || null
   });
 
   if (error || !data || !data[0]) {
     console.error('Booking error:', error);
-    errorEl.textContent = 'שגיאה: ' + (error ? (error.message || JSON.stringify(error)) : 'תשובה ריקה מהשרת');
-    errorEl.style.display = 'block';
+    errEl.textContent = 'שגיאה: ' + (error ? (error.message || JSON.stringify(error)) : 'תשובה ריקה מהשרת');
+    errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';
     return;
@@ -284,51 +668,55 @@ async function onSubmit(e, dateStr) {
   const result = data[0].result;
 
   if (result === 'confirmed') {
-    if (email) {
+    if (formData.email) {
       db.functions.invoke('send-confirmation', {
-        body: { email, name, date: dateStr, time, guests }
-      }).catch(() => {}); // לא חוסם את מסך האישור אם המייל נכשל
+        body: { email: formData.email, name: formData.name, date: formData.date, time: formData.time, guests: formData.guests }
+      }).catch(() => {});
     }
     const waText = encodeURIComponent(
-      `אישור הזמנה - ${BUSINESS_NAME}\n${name}, שולחן ל-${guests} סועדים\n${formatDisplay(dateStr)} בשעה ${time}`
+      `אישור הזמנה - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
     );
-    app.innerHTML = `
+    progressEl.innerHTML = '';
+    stepArea.innerHTML = `
       <div class="success">
-        <h2>ההזמנה שלך אושרה!</h2>
-        <p>${name}, שולחן ל-${guests} סועדים, ${formatDisplay(dateStr)} בשעה ${time}.</p>
-        <p>מצפים לראותכם ✳</p>
+        <h2>ההזמנה אושרה</h2>
+        <p>${formData.name}, שולחן ל-${formData.guests} סועדים</p>
+        <p>${formatDisplay(formData.date)} בשעה ${formData.time}</p>
+        <p class="muted">מצפים לראותכם ✳</p>
       </div>
-      <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none;">
-        <button type="button" style="background:#25D366; margin-bottom:10px;">שליחה לוואטסאפ שלי</button>
+      <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none; display:block;">
+        <button type="button" class="btn-whatsapp">שליחה לוואטסאפ שלי</button>
       </a>
-      <button type="button" id="icsBtn" style="background:var(--card); color:var(--accent); border:1px solid var(--accent);">הוספה ליומן</button>
+      <button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>
     `;
-    document.getElementById('icsBtn').addEventListener('click', () => downloadIcs(dateStr, time, guests));
+    document.getElementById('icsBtn').addEventListener('click', downloadIcs);
   } else if (result === 'full') {
-    document.getElementById('dateContent').innerHTML = `
-      <div class="full-msg">
-        <p>לצערנו התמלאנו בדיוק עכשיו.</p>
-        <p style="color:var(--muted); font-size:14px;">אפשר לנסות תאריך אחר.</p>
-      </div>`;
+    stepIndex = 0;
+    dateWarning = 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.';
+    formData.date = null;
+    renderStep();
   } else if (result === 'closed') {
-    document.getElementById('dateContent').innerHTML = `<div class="full-msg"><p>ההזמנות המקוונות לתאריך הזה נסגרו.</p></div>`;
+    stepIndex = 0;
+    dateWarning = 'ההזמנות המקוונות לתאריך הזה נסגרו.';
+    formData.date = null;
+    renderStep();
   } else {
-    errorEl.textContent = 'שעה לא תקינה, נסו שוב.';
-    errorEl.style.display = 'block';
+    errEl.textContent = 'שעה לא תקינה, נסו שוב.';
+    errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';
   }
 }
 
-function downloadIcs(dateStr, time, guests) {
-  const [h, m] = time.split(':');
-  const dt = dateStr.replace(/-/g, '') + 'T' + h + m + '00';
+function downloadIcs() {
+  const [h, m] = formData.time.split(':');
+  const dt = formData.date.replace(/-/g, '') + 'T' + h + m + '00';
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'BEGIN:VEVENT',
     `DTSTART:${dt}`,
-    `SUMMARY:הזמנה ל-${BUSINESS_NAME} (${guests} סועדים)`,
+    `SUMMARY:הזמנה ל-${BUSINESS_NAME} (${formData.guests} סועדים)`,
     'DESCRIPTION:אישור הזמנת שולחן',
     'END:VEVENT',
     'END:VCALENDAR'
