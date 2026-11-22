@@ -577,7 +577,7 @@ describe('personal booking page (booking.html#secret)',()=>{
   const bk=(extra={})=>({access_token:TOKEN,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',
     customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...extra});
   const openBooking=(extra,opts={})=>open({file:'booking.html#'+(opts.token||TOKEN),time:MORNING,cfg:{bookings:[bk(extra)]},...opts});
-  const BAR_WA='https://wa.me/972545904470';
+  const BAR_WA='https://wa.me/972587460202';
 
   test('shows the booking card, its status and the comment',async()=>{
     const {page,ctx,errors}=await openBooking();

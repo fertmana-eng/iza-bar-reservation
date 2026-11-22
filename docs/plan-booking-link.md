@@ -20,7 +20,7 @@ From the link the customer can, **until 1 hour before the arrival time**:
 and **cancel at any time** (owner's answer; frees the table).
 
 After the change deadline the link shows the booking and a WhatsApp button to
-the bar (054-5904470): the bar can't be reached by phone, only by WhatsApp,
+the bar (058-7460202): the bar can't be reached by phone, only by WhatsApp,
 Facebook or Instagram messages (owner).
 
 **Approval for changes: same rules as new bookings.** A same-day change made
@@ -65,6 +65,6 @@ channel there.
 
 ## Answers from the owner
 
-- Contact: WhatsApp 054-5904470 (no phone calls; Facebook/Instagram messages
+- Contact: WhatsApp 058-7460202 (no phone calls; Facebook/Instagram messages
   also work: add those links if the owner sends the addresses).
 - Cancel: allowed at any time.

@@ -186,7 +186,7 @@ Same owner as the IzaZoo management app (repository
    Step 1 built: `booking.html#<secret>` shows the card, live status
    (checks every 30 s), comment editing until 1 hour before arrival, cancel
    any time (marked `cancelled_by='customer'`), WhatsApp to the bar
-   (054-5904470; the bar can't be reached by phone). "ניהול ההזמנה" button on
+   (058-7460202, corrected 22 Nov 2026: an earlier number was the owner's own; the bar can't be reached by phone). "ניהול ההזמנה" button on
    the confirmation screen. Database: `10_booking_link.sql` part A applied
    via the connector; part B (`10b_book_reservation_token.sql`, returns the
    secret) run by the owner 22 Nov 2026; database check ALL 32 PASSED.
