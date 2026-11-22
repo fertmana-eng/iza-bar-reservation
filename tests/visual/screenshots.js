@@ -23,6 +23,8 @@ const STATES=[
  ['success',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');}],
  ['admin',async p=>{},{reservations:RES},'admin.html'],
  ['admin-empty',async p=>{},{},'admin.html'],
+ ['admin-login',async p=>{},{noSession:true},'admin.html'],
+ ['admin-login-wrong',async p=>{await p.fill('#userInput','izabar');await p.fill('#passInput','x');await p.click('#loginBtn');},{noSession:true,loginError:'wrong'},'admin.html'],
 ];
 (async()=>{
   const browser=await chromium.launch(),server=await startServer();

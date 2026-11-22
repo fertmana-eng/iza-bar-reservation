@@ -4,7 +4,8 @@
 //   spots (number returned by available_spots, default 10),
 //   available (result of check_availability, default true),
 //   bookResult ('confirmed' by default; 'full', 'closed', 'invalid_time'),
-//   rpcError (name of an RPC that should fail), reservations (rows for the manager page).
+//   rpcError (name of an RPC that should fail), reservations (rows for the manager page),
+//   noSession (manager not logged in), loginError ('wrong' or 'network'), failTables[] (reads that fail).
 // NOTE: this fake has no access rules, so it cannot catch a database rule that
 // refuses the page's own requests. Those are checked on the real database.
 (function(){
@@ -27,6 +28,7 @@
       update(p){st.op='update';st.payload=p;return b},
       then(res,rej){
         window.__ops.push({table,op:st.op,payload:st.payload,filters:st.filters});
+        if((cfg.failTables||[]).includes(table))return Promise.resolve({data:null,error:{message:'Failed to fetch'}}).then(res,rej);
         const rows=db[table]||[];
         const match=r=>st.filters.every(([k,v])=>String(r[k])===String(v))&&(!st.inF||st.inF[1].map(String).includes(String(r[st.inF[0]])));
         const out=rows.filter(match);
@@ -36,7 +38,18 @@
     };
     return b;
   }
+  let session=cfg.noSession?null:{user:{id:'u1',email:'izabar@izabar.local'}};
   window.supabase={createClient(){return {
+    auth:{
+      getSession:async()=>({data:{session},error:null}),
+      signInWithPassword:async({email,password})=>{
+        window.__ops.push({auth:'signIn',email});
+        if(cfg.loginError==='wrong')return {data:{},error:{status:400,message:'Invalid login credentials'}};
+        if(cfg.loginError==='network')return {data:{},error:{status:0,message:'Failed to fetch'}};
+        session={user:{id:'u1',email}};return {data:{session},error:null};
+      },
+      signOut:async()=>{window.__ops.push({auth:'signOut'});session=null;return {error:null};}
+    },
     from:q,
     rpc:async(name,args)=>{
       window.__ops.push({rpc:name,args});

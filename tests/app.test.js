@@ -96,6 +96,45 @@ describe('customer booking page',()=>{
   });
 });
 
+describe('manager login',()=>{
+  test('without a login, the manager page shows only the login form and reads nothing',async()=>{
+    const {page,ctx,errors}=await open({file:'admin.html',cfg:{noSession:true}});
+    assert.ok(await page.isVisible('#loginForm'));
+    assert.equal(await page.$('#listContent'),null);
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.table)),[]);
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('logging in with the username opens the bookings',async()=>{
+    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{noSession:true}});
+    await page.fill('#userInput',' IzaBar ');await page.fill('#passInput','secret');
+    await page.click('#loginBtn');await page.waitForSelector('#listContent .summary');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.auth)),[{auth:'signIn',email:'izabar@izabar.local'}]);
+    assert.match(await text(page,'#listContent'),/הזמנות ל-22\.11\.2026/);
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('a wrong password or no connection shows a clear message',async()=>{
+    for(const [loginError,msg] of [['wrong',/שם משתמש או סיסמה שגויים/],['network',/אין חיבור לשרת/]]){
+      const {page,ctx}=await open({file:'admin.html',cfg:{noSession:true,loginError}});
+      await page.fill('#userInput','izabar');await page.fill('#passInput','x');
+      await page.click('#loginBtn');await page.waitForTimeout(200);
+      assert.match(await text(page,'#loginError'),msg);
+      assert.ok(await page.isEnabled('#loginBtn'));await ctx.close();
+    }
+  });
+  test('an empty username or password is not sent',async()=>{
+    const {page,ctx}=await open({file:'admin.html',cfg:{noSession:true}});
+    await page.fill('#userInput','izabar');await page.click('#loginBtn');await page.waitForTimeout(200);
+    assert.match(await text(page,'#loginError'),/נא למלא/);
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.auth)),[]);await ctx.close();
+  });
+  test('signing out returns to the login form',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:MORNING});
+    await page.click('#signOutBtn');await page.waitForTimeout(200);
+    assert.ok(await page.isVisible('#loginForm'));
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.auth)),[{auth:'signOut'}]);await ctx.close();
+  });
+});
+
 describe('manager page',()=>{
   const reservations=[
     {id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_name:'רון',phone:'052-1111111',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'confirmed'},
@@ -113,6 +152,13 @@ describe('manager page',()=>{
     assert.deepEqual(dialogs,['לבטל את ההזמנה הזו?']);
     assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),'cancelled');
     await ctx.close();
+  });
+  test('if the bookings cannot be loaded, a message and a retry button are shown',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations,failTables:['reservations']}});
+    assert.match(await text(page,'#listContent'),/ההזמנות לא נטענו/);
+    await page.evaluate(()=>{__cfg.failTables=[];});
+    await page.click('#retryBtn');await page.waitForTimeout(200);
+    assert.match(await text(page,'#listContent'),/2 הזמנות · 5 סועדים/);await ctx.close();
   });
   test('saying no to the cancel question keeps the booking',async()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations},dismissDialogs:true});

@@ -73,6 +73,15 @@
   .res-guests { color: var(--muted); font-size: 13px; white-space: nowrap; }
   .res-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .summary { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .top-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .signout-link {
+    all: unset;
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .error[hidden] { display: none; }
   .cancel-link {
     color: var(--danger);
     font-size: 13px;
@@ -109,13 +118,58 @@ function formatDisplay(dateStr) {
 
 let currentDate = todayStr();
 
+// Manager login: one username + password. Supabase logins need an email
+// address, so the username becomes <username>@izabar.local (not a real inbox).
+const LOGIN_DOMAIN = 'izabar.local';
+
+async function start() {
+  const { data } = await db.auth.getSession();
+  if (data && data.session) renderShell(); else renderLogin();
+}
+
+function renderLogin() {
+  app.innerHTML = `
+    <h1>ניהול הזמנות</h1>
+    <form class="card" id="loginForm">
+      <input id="userInput" placeholder="שם משתמש" autocomplete="username" autocapitalize="off" spellcheck="false" dir="ltr">
+      <input id="passInput" type="password" placeholder="סיסמה" autocomplete="current-password" dir="ltr">
+      <div class="error" id="loginError" hidden></div>
+      <button type="submit" id="loginBtn">כניסה</button>
+    </form>
+  `;
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = document.getElementById('userInput').value.trim().toLowerCase();
+    const password = document.getElementById('passInput').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    errEl.hidden = true;
+    if (!user || !password) { errEl.textContent = 'נא למלא שם משתמש וסיסמה.'; errEl.hidden = false; return; }
+    btn.disabled = true; btn.textContent = 'נכנס...';
+    const { error } = await db.auth.signInWithPassword({ email: user + '@' + LOGIN_DOMAIN, password });
+    if (error) {
+      errEl.textContent = error.status === 400 ? 'שם משתמש או סיסמה שגויים.' : 'אין חיבור לשרת, נסו שוב.';
+      errEl.hidden = false; btn.disabled = false; btn.textContent = 'כניסה';
+      return;
+    }
+    renderShell();
+  });
+}
+
+async function signOut() {
+  await db.auth.signOut();
+  renderLogin();
+}
+
 async function renderShell() {
   app.innerHTML = `
+    <div class="top-bar"><button type="button" class="signout-link" id="signOutBtn">יציאה</button></div>
     <div class="field" style="margin-bottom:16px;">
       <input id="dateInput" type="date" value="${currentDate}">
     </div>
     <div id="listContent">טוען...</div>
   `;
+  document.getElementById('signOutBtn').addEventListener('click', signOut);
   document.getElementById('dateInput').addEventListener('change', (e) => {
     currentDate = e.target.value;
     renderList();
@@ -127,13 +181,19 @@ async function renderList() {
   const content = document.getElementById('listContent');
   content.innerHTML = `<p>טוען הזמנות...</p>`;
 
-  const { data: tables } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
-  const { data: reservations } = await db
+  const { data: tables, error: tablesError } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
+  const { data: reservations, error: resError } = await db
     .from('reservations')
     .select('id,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status')
     .eq('reservation_date', currentDate)
     .eq('status', 'confirmed')
     .order('arrival_time');
+
+  if (tablesError || resError) {
+    content.innerHTML = `<div class="card"><p class="error">ההזמנות לא נטענו. בדקו את החיבור ונסו שוב.</p><button type="button" id="retryBtn">נסו שוב</button></div>`;
+    document.getElementById('retryBtn').addEventListener('click', renderList);
+    return;
+  }
 
   const tableById = Object.fromEntries((tables || []).map(t => [t.id, t]));
   const totalGuests = (reservations || []).reduce((s, r) => s + r.guests, 0);
@@ -184,7 +244,7 @@ async function renderList() {
   });
 }
 
-renderShell();
+start();
 </script>
 </body>
 </html>
