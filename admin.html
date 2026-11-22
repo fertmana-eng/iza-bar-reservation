@@ -50,6 +50,7 @@
   .topbar .spacer { flex: 1; }
   .signout-link { all: unset; color: var(--muted); font-size: 13px; text-decoration: underline; cursor: pointer; padding: 8px; }
   .summary { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  .late-count { color: #a32c29; }
 
   .floor { display: grid; grid-template-columns: minmax(320px, 44%) 1fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .floor { grid-template-columns: 1fr; } }
@@ -76,6 +77,9 @@
   .tbl.pending rect { fill: var(--pending); stroke: #c9a227; }
   .tbl.arrived rect { fill: var(--arrived); stroke: #1f8a4a; }
   .tbl.arrived text { fill: #fff; }
+  .tbl.late rect { fill: #f2994a; stroke: #c66f1f; }
+  .tbl.late15 rect { fill: #d64541; stroke: #a32c29; }
+  .tbl.late text, .tbl.late15 text { fill: #fff; }
   .moving .tbl.target rect { stroke: #2563eb; stroke-width: 8; stroke-dasharray: 16 10; }
   .moving .tbl.taken { opacity: .35; }
   .bar-hit { cursor: pointer; }
@@ -92,6 +96,9 @@
   .sheet tr.pending td { background: var(--pending-bg); }
   .sheet tr.pending td:first-child { box-shadow: inset -4px 0 0 var(--pending); }
   .sheet tr.arrived td:first-child { box-shadow: inset -4px 0 0 var(--arrived); }
+  .sheet tr.late td:first-child { box-shadow: inset -4px 0 0 #f2994a; }
+  .sheet tr.late15 td { background: #fdf0ef; }
+  .sheet tr.late15 td:first-child { box-shadow: inset -4px 0 0 #d64541; }
   .sheet tr.free td { color: #b3ab9c; }
   .sheet .c-table { font-weight: 800; width: 60px; white-space: nowrap; }
   .sheet .c-time { white-space: nowrap; font-weight: 600; width: 64px; }
@@ -100,6 +107,9 @@
   .tag { display: inline-block; font-size: 11px; border-radius: 6px; padding: 1px 6px; white-space: nowrap; margin-inline-start: 4px; }
   .tag-pending, .tag-changed { color: var(--pending-ink); background: #f6e7c4; }
   .tag-arrived { color: #fff; background: var(--arrived); }
+  .tag-late { color: #fff; background: #f2994a; }
+  .tag-late15 { color: #fff; background: #d64541; }
+  .late-note { background: #fdf0ef; color: #a32c29; border-radius: 8px; padding: 8px 10px; font-size: 14px; margin: 0 0 12px; font-weight: 600; }
   .group-title { font-size: 13px; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
   .list-panel > .group-title:first-child { margin-top: 0; }
   .pending-title { color: var(--pending-ink); }
@@ -346,11 +356,23 @@ const WALLS = ['M365,415 L365,1105 L330,1105 L40,1275 L40,1320', 'M40,1530 L40,1
   'M530,415 L530,45 L1610,45 L1610,1260 L1305,1260 L1305,415', 'M840,380 L840,700'];
 const GLASS = ['M150,1690 L350,1690', 'M370,1690 L690,1690', 'M1005,1690 L1255,1690', 'M40,1320 L40,1530'];
 
+// Late: tonight's confirmed booking whose time has passed and isn't marked "הגיעו".
+// After 15 minutes (the bar's rule) the table may be released.
+const LATE_LIMIT = 15;
+function minutesLate(r) {
+  if (!r || r.status !== 'confirmed' || r.arrived_at || r.reservation_date !== todayStr()) return 0;
+  const [h, m] = r.arrival_time.split(':').map(Number), [nh, nm] = nowTime().split(':').map(Number);
+  return Math.max(0, nh * 60 + nm - (h * 60 + m));
+}
 function tableState(r) {
   if (!r) return 'free';
   if (r.status === 'pending') return 'pending';
-  return r.arrived_at ? 'arrived' : 'booked';
+  if (r.arrived_at) return 'arrived';
+  const late = minutesLate(r);
+  return late >= LATE_LIMIT ? 'late15' : late > 0 ? 'late' : 'booked';
 }
+const lateTag = r => { const m = minutesLate(r);
+  return m ? ` <span class="tag ${m >= LATE_LIMIT ? 'tag-late15' : 'tag-late'}">מאחרים ${m} דק׳</span>` : ''; };
 function planSvg(d) {
   const tables = d.tables.filter(t => t.kind === 'table' && PLAN_TABLES[t.name]);
   const bar = d.tables.find(t => t.kind === 'bar_pool');
@@ -362,7 +384,7 @@ function planSvg(d) {
     return `<g class="tbl ${st}${moveCls}" data-table="${t.id}" role="button" aria-label="${esc(t.name)}${r ? ' · ' + esc(r.customer_name) : ' · פנוי'}">
       <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>
       <text class="num" x="${cx}" y="${big && r ? cy - 20 : cy}">${tableNumber(t)}</text>
-      ${r && big ? `<text class="who" x="${cx}" y="${cy + 30}">${r.arrival_time.slice(0, 5)}</text>` : ''}
+      ${r && big ? `<text class="who" x="${cx}" y="${cy + 30}" direction="ltr">${minutesLate(r) ? `+${minutesLate(r)}′` : r.arrival_time.slice(0, 5)}</text>` : ''}
     </g>`;
   }).join('');
   const barUsed = d.barRows.reduce((s, r) => s + r.guests, 0);
@@ -426,15 +448,17 @@ async function renderList(quiet) {
 
   const guests = confirmed.reduce((s, r) => s + r.guests, 0);
   const arrived = confirmed.filter(r => r.arrived_at).length;
+  const late = confirmed.filter(r => minutesLate(r) > 0).length;
   let html = `
     ${moving ? `<div class="move-banner" id="moveBanner">בחרו שולחן חדש עבור ${esc(moving.customer_name)} (${moving.guests} סועדים)
       <span style="flex:1"></span><button type="button" id="moveCancel">ביטול</button></div>` : ''}
-    <p class="summary" id="summary">${confirmed.length} הזמנות · ${guests} סועדים${pending.length ? ` · ${pending.length} ממתינות לאישור` : ''}${arrived ? ` · ${arrived} הגיעו` : ''}</p>
+    <p class="summary" id="summary">${confirmed.length} הזמנות · ${guests} סועדים${pending.length ? ` · ${pending.length} ממתינות לאישור` : ''}${arrived ? ` · ${arrived} הגיעו` : ''}${late ? ` · <b class="late-count">${late} מאחרים</b>` : ''}</p>
     ${saveError ? `<p class="error">${saveError}</p>` : ''}
     <div class="floor${moving ? ' moving' : ''}">
       <section class="plan-panel">${planSvg(d)}
         <div class="legend"><span><i style="background:#fff"></i>פנוי</span><span><i style="background:var(--accent)"></i>מוזמן</span>
-          <span><i style="background:var(--pending)"></i>ממתין לאישור</span><span><i style="background:var(--arrived)"></i>הגיעו</span></div>
+          <span><i style="background:var(--pending)"></i>ממתין לאישור</span><span><i style="background:var(--arrived)"></i>הגיעו</span>
+          <span><i style="background:#f2994a"></i>מאחרים</span><span><i style="background:#d64541"></i>15 דק׳ ומעלה</span></div>
       </section>
       <section class="list-panel">`;
   saveError = null;
@@ -458,7 +482,7 @@ async function renderList(quiet) {
   // the sheet: one row per table (like the paper), then the bar's bookings
   const sheetRow = (t, r, label) => `<tr class="row ${tableState(r)}" data-table="${t ? t.id : ''}" ${r ? `data-id="${r.id}"` : ''}>
       <td class="c-table">${label}</td>
-      <td class="c-name">${r ? esc(r.customer_name) : ''}${r && r.status === 'pending' ? ' <span class="tag tag-pending">ממתין</span>' : ''}${r && r.status === 'confirmed' && r.changed_at ? ' <span class="tag tag-changed">שונתה ע״י הלקוח</span>' : ''}${r && r.arrived_at ? ' <span class="tag tag-arrived">הגיעו ✓</span>' : ''}</td>
+      <td class="c-name">${r ? esc(r.customer_name) : ''}${r && r.status === 'pending' ? ' <span class="tag tag-pending">ממתין</span>' : ''}${r && r.status === 'confirmed' && r.changed_at ? ' <span class="tag tag-changed">שונתה ע״י הלקוח</span>' : ''}${r && r.arrived_at ? ' <span class="tag tag-arrived">הגיעו ✓</span>' : ''}${lateTag(r)}</td>
       <td class="c-time">${r ? r.arrival_time.slice(0, 5) : ''}</td>
       <td class="c-guests">${r ? r.guests : ''}</td>
       <td class="c-note">${r && r.note ? esc(r.note) : ''}</td>
@@ -526,6 +550,7 @@ function openBooking(r) {
   openPanel(`
     <h2>${esc(r.tableName)} · ${esc(r.customer_name)}</h2>
     <p class="sub">${pending ? 'ממתינה לאישור' : r.arrived_at ? 'הגיעו ✓' : 'מוזמן'}${r.changed_at && !pending ? ' · שונתה ע״י הלקוח' : ''}</p>
+    ${minutesLate(r) ? `<p class="late-note" id="lateNote">מאחרים ${minutesLate(r)} דקות${minutesLate(r) >= LATE_LIMIT ? '. עברו 15 דקות: אפשר לשחרר את השולחן.' : ''}</p>` : ''}
     <dl>
       <dt>שעה</dt><dd>${r.arrival_time.slice(0, 5)}</dd>
       <dt>סועדים</dt><dd>${r.guests}</dd>
