@@ -328,6 +328,19 @@ describe('manager page (floor plan and evening sheet)',()=>{
     assert.deepEqual(await sheetRows(page),['1 רון 19:00 2','2','3','4','6','7','18','בר מאיה 18:00 3 כיסא תינוק','בר + הוספה לבר']);
     assert.deepEqual(errors,[]);await ctx.close();
   });
+  test('the floor plan is the approved picture, whole and in proportion on a tablet and a phone',async()=>{
+    for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
+      const {page,ctx,errors}=await openAdmin(reservations,{viewport});
+      const r=await page.evaluate(async()=>{
+        const img=document.querySelector('#plan image'),svg=document.getElementById('plan').getBoundingClientRect();
+        const probe=new Image();probe.src=img.getAttribute('href');await probe.decode();
+        return {href:img.getAttribute('href'),viewBox:document.getElementById('plan').getAttribute('viewBox'),
+          natural:[probe.naturalWidth,probe.naturalHeight],square:Math.abs(svg.width-svg.height)<1.5,
+          fits:svg.right<=innerWidth+0.5&&svg.left>=-0.5};});
+      assert.deepEqual(r,{href:'assets/iza_main_hall_v2.webp',viewBox:'0 0 1254 1254',natural:[1254,1254],square:true,fits:true},JSON.stringify(viewport));
+      assert.deepEqual(errors,[]);await ctx.close();
+    }
+  });
   test('the floor plan colours each table by its state and counts the bar',async()=>{
     const rows=[...reservations,{id:3,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'דן',phone:'050-3',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending'},
       {id:4,reservation_date:'2026-11-22',arrival_time:'17:00:00',customer_name:'גל',phone:'050-4',guests:6,note:null,assigned_table_id:7,assigned_kind:'table',status:'confirmed',arrived_at:'2026-11-22T15:00:00Z'}];
