@@ -257,6 +257,7 @@
 <!-- =================================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="card.js"></script>
 <script>
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -693,6 +694,7 @@ async function submitBooking() {
     const pending = result === 'pending';
     formData.bookingId = data[0].reservation_id;
     formData.pending = pending;
+    const token = data[0].booking_token;     // the customer's private link (booking.html#<token>)
     const title = pending ? 'הבקשה התקבלה' : 'ההזמנה אושרה';
     const waText = encodeURIComponent(
       `${pending ? 'בקשת הזמנה (ממתינה לאישור)' : 'אישור הזמנה'} - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
@@ -713,6 +715,7 @@ async function submitBooking() {
       ${pending ? '' : IS_ANDROID
         ? `<a class="btn-outline" id="calLink" href="${googleCalendarUrl()}" target="_blank" rel="noopener">הוספה ליומן</a>`
         : `<button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>`}
+      ${token ? `<a class="btn-outline" id="manageLink" href="booking.html#${encodeURIComponent(token)}">ניהול ההזמנה</a>` : ''}
     `;
     if (!pending && !IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
     prepareCard();
@@ -739,42 +742,10 @@ async function submitBooking() {
 // attach a file to a WhatsApp link or send from the bar's WhatsApp, so the button
 // opens the phone's share sheet with the picture; the customer picks WhatsApp.
 // Where sharing files isn't possible (most computers) the link sends the text as before.
-const CARD_W = 1080, CARD_H = 1350;
-function drawBookingCard(canvas, b) {
-  canvas.width = CARD_W; canvas.height = CARD_H;
-  const c = canvas.getContext('2d'), ink = '#1c1610', paper = '#f0e8d0', soft = '#5a4f3c', mid = CARD_W / 2;
-  const text = (t, y, size, weight, color, maxW = 960) => {
-    let s = size; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`;
-    while (c.measureText(t).width > maxW && s > 20) { s -= 2; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`; }
-    c.fillStyle = color; c.fillText(t, mid, y);
-  };
-  const dashed = y => { c.save(); c.setLineDash([14, 12]); c.strokeStyle = 'rgba(28,22,16,.35)'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(80, y); c.lineTo(CARD_W - 80, y); c.stroke(); c.restore(); };
-  c.direction = 'rtl'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-  c.fillStyle = paper; c.fillRect(0, 0, CARD_W, CARD_H);
-  c.fillStyle = ink; c.fillRect(0, 0, CARD_W, 270);
-  text(b.business + ' //', 160, 120, 900, paper);
-  text('הזמנת מקומות', 225, 40, 700, 'rgba(240,232,208,.65)');
-  text(b.pending ? 'הבקשה התקבלה' : 'ההזמנה אושרה', 380, 68, 900, ink);
-  text(b.name, 465, 54, 600, soft);
-  dashed(530);
-  text(b.weekday + ' · ' + b.dateShort, 650, 70, 800, ink);
-  text(b.time, 850, 190, 900, ink);
-  text(`שולחן ל-${b.guests} סועדים`, 950, 58, 600, ink);
-  dashed(1020);
-  if (b.pending) {
-    text('ממתינה לאישור · נעדכן אתכם בוואטסאפ', 1100, 40, 700, ink);
-    text('נחכה עד 15 דקות משעת ההזמנה', 1160, 38, 400, soft);
-  } else {
-    text('נחכה עד 15 דקות משעת ההזמנה', 1100, 38, 400, soft);
-    text('מצפים לראותכם ✳', 1160, 38, 400, soft);
-  }
-  if (b.bookingId) text('מספר הזמנה ' + b.bookingId, 1285, 32, 400, soft);
-}
+// The card itself is drawn by drawBookingCard() in card.js (shared with booking.html).
 function cardData() {
-  return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId, pending: formData.pending,
-    dateShort: formatDisplay(formData.date),
-    weekday: fromDateStr(formData.date).toLocaleDateString('he-IL', { weekday: 'long' }) };
+  return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId,
+    pending: formData.pending, date: formData.date };
 }
 let cardFile = null;
 async function prepareCard() {

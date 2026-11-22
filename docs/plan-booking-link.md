@@ -1,6 +1,6 @@
 # Plan: personal booking link (step 1 of customer accounts)
 
-Status: **waiting for the owner's OK** (planning interview, 22 Nov 2026).
+Status: **approved by the owner** (planning interview, 22 Nov 2026). Step 1 built (Nov 2026); steps 2-4 next.
 Step 2 (optional customer accounts with history, e.g. Google sign-in) comes later
 and reuses all of this.
 
@@ -17,9 +17,11 @@ Opening the link shows the booking card and its **status**, updating by itself:
 
 From the link the customer can, **until 1 hour before the arrival time**:
 - change the **arrival time**, **number of guests**, **date** and **comment**,
-- **cancel** the booking (frees the table).
+and **cancel at any time** (owner's answer; frees the table).
 
-After that the link only shows the booking, with the bar's phone number.
+After the change deadline the link shows the booking and a WhatsApp button to
+the bar (054-5904470): the bar can't be reached by phone, only by WhatsApp,
+Facebook or Instagram messages (owner).
 
 **Approval for changes: same rules as new bookings.** A same-day change made
 between 16:00 and 20:00 waits for approval; other changes are confirmed at once
@@ -61,7 +63,8 @@ channel there.
 4. Android notifications (a small server function sends them; its key is
    stored in Supabase, never in the code).
 
-## Open questions for the owner
+## Answers from the owner
 
-- The bar's phone number to show after the change deadline.
-- Cancel: also until 1 hour before (like changes), or any time?
+- Contact: WhatsApp 054-5904470 (no phone calls; Facebook/Instagram messages
+  also work: add those links if the owner sends the addresses).
+- Cancel: allowed at any time.

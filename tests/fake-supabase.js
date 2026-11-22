@@ -5,6 +5,7 @@
 //   available (result of check_availability, default true),
 //   bookResult ('confirmed' by default; 'pending', 'full', 'closed', 'invalid', 'invalid_time'),
 //   rpcError (name of an RPC that should fail), reservations (rows for the manager page),
+//   token (secret returned with a new booking), bookings (rows for booking.html, with access_token),
 //   noSession (manager not logged in), loginError ('wrong' or 'network'), failTables[] (reads that fail).
 // NOTE: this fake has no access rules, so it cannot catch a database rule that
 // refuses the page's own requests. Those are checked on the real database.
@@ -16,7 +17,8 @@
       {id:1,name:'שולחן 1',area:'high',kind:'table',sort_order:1},
       {id:4,name:'שולחן 4',area:'low',kind:'table',sort_order:5},
       {id:8,name:'בר',area:'bar',kind:'bar_pool',sort_order:8}],
-    reservations:cfg.reservations||[]
+    reservations:cfg.reservations||[],
+    bookings:cfg.bookings||[]
   };
   window.__db=db;window.__ops=[];
   function q(table){
@@ -56,7 +58,14 @@
       if(cfg.rpcError===name)return {data:null,error:{message:'failed'}};
       if(name==='available_spots')return {data:cfg.spots??10,error:null};
       if(name==='check_availability')return {data:cfg.available??true,error:null};
-      if(name==='book_reservation')return {data:[{result:cfg.bookResult||'confirmed',reservation_id:['confirmed','pending'].includes(cfg.bookResult||'confirmed')?101:null}],error:null};
+      if(name==='book_reservation'){const ok=['confirmed','pending'].includes(cfg.bookResult||'confirmed');
+        return {data:[{result:cfg.bookResult||'confirmed',reservation_id:ok?101:null,booking_token:ok?(cfg.token===undefined?'11111111-2222-4333-8444-555555555555':cfg.token):null}],error:null};}
+      // the personal booking link's functions (10_booking_link.sql)
+      const bk=(db.bookings||[]).find(b=>b.access_token===args?.p_token);
+      if(name==='get_booking'){if(!bk)return {data:[],error:null};const {access_token,...row}=bk;return {data:[row],error:null};}
+      if(name==='update_booking_note'){if(!bk)return {data:'not_found',error:null};if(!bk.can_change)return {data:'locked',error:null};bk.note=args.p_note||null;return {data:'saved',error:null};}
+      if(name==='cancel_booking'){if(!bk)return {data:'not_found',error:null};if(!['confirmed','pending'].includes(bk.status))return {data:bk.status,error:null};
+        Object.assign(bk,{status:'cancelled',cancelled_by:'customer',can_change:false,can_cancel:false});return {data:'cancelled',error:null};}
       return {data:null,error:{message:'unknown function '+name}};
     },
     functions:{invoke:async(n,o)=>{window.__ops.push({fn:n,body:o.body});return {data:{},error:null}}}
