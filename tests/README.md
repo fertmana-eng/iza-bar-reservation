@@ -14,6 +14,16 @@ node --test tests/app.test.js
 Each test checks its own result (pass / fail). Run them after every change.
 The same tests run on GitHub on every pull request ("Tests").
 
+## Database access check (real database)
+
+`tests/db/checks.sql` tests the access rules on the real Supabase database:
+the public can book and read the opening hours but can't see or change
+bookings; the logged-in manager can read bookings and tables and cancel. It
+runs inside one block that rolls everything back, and reports
+`DB CHECKS: ALL n PASSED` or the list of failed checks. Run it through the
+Supabase connector (execute_sql) or paste it into the SQL Editor. Not run on
+GitHub on purpose.
+
 ## Screenshot comparison (for styling changes)
 
 ```

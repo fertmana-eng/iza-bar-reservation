@@ -13,9 +13,13 @@ Supabase project id: `brpovhypzsgwsnuenpfj` (it pauses after inactivity; if
 it is paused, ask the owner before restoring it).
 
 The rule to protect: **customers' names, phone numbers and emails may be seen
-only by a logged-in manager.** The publishable key is in the public booking
+only by the logged-in manager** (one user, `izabar`; public sign-up must be off). The publishable key is in the public booking
 page, so anything the "anon" role can reach, anyone on the internet can reach.
 
+0. **Run the saved database check first:** pass the contents of
+   `tests/db/checks.sql` to the Supabase connector's execute_sql. It must end
+   with "DB CHECKS: ALL n PASSED". When a change adds a new database action,
+   function or permission rule, add a check for it to that file in the same change.
 1. **Automatic advisor:** run Supabase's security advisor and explain every
    warning.
 2. **Anonymous access:** the anon role may only read the public settings

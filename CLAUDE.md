@@ -33,8 +33,15 @@ Same owner as the IzaZoo management app (repository
   optional note and email → confirmation with "send to my WhatsApp" and "add
   to calendar". Same-day online booking closes at 17:00. Outdoor seating can't
   be booked (walk-in only), as the welcome text says.
-- `admin.html`: the manager page: the bookings of a chosen day grouped into
-  high tables / low tables / bar, with totals and a cancel button.
+- `admin.html`: the manager page: login first, then the bookings of a chosen
+  day grouped into high tables / low tables / bar, with totals, a cancel
+  button and "יציאה" (sign out).
+- Login (owner's decision, Nov 2026): **one user only, the restaurant**,
+  username `izabar`. Supabase logins need an email, so the page turns the
+  username into `izabar@izabar.local` (not a real inbox; created by the owner
+  in Supabase → Authentication → Users with "Auto Confirm User"). Never store
+  the password anywhere. Public sign-up must stay OFF, otherwise anyone could
+  create a login and see every booking.
 - Seating (database function `book_reservation`): 7 indoor tables (high: 1, 2,
   3, 18; low: 4, 6, 7, each with a min/max group size) plus the bar as one
   shared pool of 12 seats (groups of 1–4). A booking gets the tightest-fitting
@@ -66,9 +73,11 @@ Same owner as the IzaZoo management app (repository
 
 1. **Customer details are open to anyone.** `03_admin_policies.sql` lets the
    anon role read all reservations (names, phones, emails) and update them
-   (cancel), and read all tables. Since the publishable key is in the public
-   page, anyone can do this, not only someone with the admin link. Needs: a
-   manager login on `admin.html` and policies for logged-in managers only.
+   (cancel), and read all tables. Being fixed: the manager login is in
+   `admin.html`; the database change is `supabase/migrations/06_manager_login.sql`
+   (given to the owner to run; it drops rules, so the connector can't apply
+   it). After it runs, `tests/db/checks.sql` must report ALL PASSED (before it,
+   6 of 17 fail).
 2. ~~`check_availability` missing~~: it exists in the real database (created
    by hand in Sept); now saved as `supabase/migrations/05_check_availability.sql`.
 3. **Time zone.** The database's `current_date`/`current_time` are UTC, so the
@@ -88,8 +97,8 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Fix problem 1 (manager login + closing customer data to the public), with
-   a saved real-database check (`tests/db/checks.sql`, like IzaZoo's).
+1. Finish problem 1: the owner creates the `izabar` user, turns public
+   sign-up off and runs `06_manager_login.sql`; then run `tests/db/checks.sql`.
 2. Fix 3–6, one change each. Real-database facts (Nov 2026): anon and
    authenticated have every table permission on all three tables (Supabase's
    default), so the policies are the only protection.
@@ -138,11 +147,14 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (11 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (17 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
   differences, or differences the owner asked for.
+- **Real-database check:** `tests/db/checks.sql` (rolled back; reports
+  `DB CHECKS: ALL n PASSED`), run by the security check through the connector.
+  Not run on GitHub on purpose (it would need the database password there).
 - **The fake database has no access rules**, and its `check_availability`
   answers even though that function may not exist in the real database.
   Database rules and functions must be checked on the real database
@@ -155,6 +167,10 @@ with a fixed clock in Israel time.
   `supabase/`; added this file, the behaviour tests, screenshot tools, the
   GitHub "Tests" workflow and the /qa, /design-check, /security-check and
   /health-check checklists. No change to how the pages work.
+- Nov 2026: published with GitHub Pages (repository made public); the
+  database was restored; `check_availability` saved from the live database.
+- Nov 2026: manager login on `admin.html` (one user, `izabar`), sign out, and
+  a message with "נסו שוב" when bookings can't be loaded.
 
 ## Health checks
 
