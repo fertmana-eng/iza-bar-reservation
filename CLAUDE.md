@@ -50,9 +50,14 @@ Same owner as the IzaZoo management app (repository
 - `admin.html`: the manager's evening screen (owner's design request, 22 Nov
   2026; tablet in landscape, kept with the restaurant's WhatsApp): login,
   then a top bar (‹ date › arrows, weekday and date, "+ הזמנה חדשה",
-  "יציאה"), the evening's totals, and side by side: the **floor plan** (SVG
-  drawn from the old architect's plan; tables coloured free / booked /
-  waiting / arrived; the bar shows used/12 seats) and the **sheet** modelled
+  "יציאה"), the evening's totals, and side by side: the **floor plan** (the
+  owner's approved picture of the main hall, `assets/iza_main_hall_v2.webp`:
+  a pixel-identical lossless WebP of the handoff's `iza_main_hall_v2.png`
+  (2.8 MB → 1.8 MB, owner's choice), shown unchanged, square, never
+  stretched or cut; coloured table markers on top in the picture's own
+  1254-pixel coordinates, owner's choice to keep them although the handoff
+  said "no overlay yet"; tables coloured free / booked / waiting / arrived /
+  late; the bar shows used/12 seats in a pill below it) and the **sheet** modelled
   on the bar's paper sheet (שולחן | שם | שעה | סועדים | הערות; one row per
   table 1, 2, 3, 4, 6, 7, 18, then one row per bar booking, then "+ הוספה
   לבר"), with "ממתינות לאישור" (אישור / דחייה → WhatsApp) above it and
@@ -67,6 +72,11 @@ Same owner as the IzaZoo management app (repository
   manager only). **Which number is which table on the plan is Claude's
   guess** (`PLAN_TABLES` in admin.html: 3, 1, 2 on the left wall; 18, 4 on
   the right wall; 6 the window counter; 7 the lounge): the owner corrects it.
+  Not mapped: the small wooden table with stools at the bar's lower-left
+  corner in the picture (ask the owner whether it is a table of its own).
+  The handoff (ChatGPT, Nov 2026) planned a later data-driven overlay with
+  normalized 0-1 coordinates stored in the data model; today positions are
+  constants in admin.html.
   Refreshes quietly every minute (not while a panel is open or a move is
   being chosen). **Late guests** (owner, 22 Nov 2026): tonight's confirmed
   booking not marked "הגיעו" turns orange after its time ("מאחרים N דק׳" on
@@ -253,7 +263,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (69 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (70 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero

@@ -59,31 +59,25 @@
   .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 6px 4px 0; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-inline-end: 4px; border: 1px solid #bdb6a6; }
 
-  /* floor plan drawing */
-  .p-floor { fill: #f3ede0; }
-  .p-service { fill: #e2ddd2; }
-  .p-wall { stroke: #3d352b; stroke-width: 18; fill: none; stroke-linecap: square; }
-  .p-glass { stroke: #9cc7d4; stroke-width: 10; fill: none; }
-  .p-bar { stroke: #4a3a2a; stroke-width: 40; fill: none; stroke-linejoin: round; }
-  .p-work { fill: #cfc5b3; }
-  .p-stairs { fill: none; stroke: #b8ae9c; stroke-width: 3; }
-  .p-label { font-size: 30px; fill: #8b8172; font-weight: 600; text-anchor: middle; }
+  /* floor plan: the approved picture, with the table markers on top */
+  .plan-panel svg image { pointer-events: none; }
   .tbl { cursor: pointer; }
-  .tbl rect { stroke: #bdb6a6; stroke-width: 4; fill: #fff; rx: 8; }
-  .tbl .num { font-size: 46px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: var(--ink); }
-  .tbl .who { font-size: 28px; font-weight: 600; text-anchor: middle; fill: var(--ink); }
-  .tbl.booked rect { fill: var(--accent); stroke: var(--accent); }
-  .tbl.booked text { fill: #fff; }
-  .tbl.pending rect { fill: var(--pending); stroke: #c9a227; }
-  .tbl.arrived rect { fill: var(--arrived); stroke: #1f8a4a; }
-  .tbl.arrived text { fill: #fff; }
-  .tbl.late rect { fill: #f2994a; stroke: #c66f1f; }
-  .tbl.late15 rect { fill: #d64541; stroke: #a32c29; }
-  .tbl.late text, .tbl.late15 text { fill: #fff; }
+  .tbl rect { fill: rgba(255,255,255,.55); stroke: #fff; stroke-width: 4; rx: 8; }
+  .tbl .num { font-size: 40px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: #1f1e1c;
+    paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 6; }
+  .tbl .who { font-size: 26px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: #fff; }
+  .tbl.booked rect { fill: rgba(47,74,61,.9); stroke: #fff; }
+  .tbl.pending rect { fill: rgba(242,201,76,.92); stroke: #fff; }
+  .tbl.arrived rect { fill: rgba(47,174,96,.92); stroke: #fff; }
+  .tbl.late rect { fill: rgba(242,153,74,.95); stroke: #fff; }
+  .tbl.late15 rect { fill: rgba(214,69,65,.95); stroke: #fff; }
+  .tbl.booked .num, .tbl.arrived .num, .tbl.late .num, .tbl.late15 .num { fill: #fff; stroke: none; }
   .moving .tbl.target rect { stroke: #2563eb; stroke-width: 8; stroke-dasharray: 16 10; }
   .moving .tbl.taken { opacity: .35; }
   .bar-hit { cursor: pointer; }
-  .bar-count { font-size: 44px; font-weight: 800; fill: #fff; text-anchor: middle; paint-order: stroke; stroke: #4a3a2a; stroke-width: 10; }
+  .bar-area { fill: transparent; }
+  .bar-pill { fill: rgba(31,30,28,.85); }
+  .bar-count { font-size: 30px; font-weight: 800; fill: #fff; text-anchor: middle; dominant-baseline: central; }
 
   /* the sheet */
   .sheet-card { padding: 0; overflow: hidden; }
@@ -339,22 +333,22 @@ async function moveTo(tableId) {
   renderList();
 }
 
-// ---------- the floor plan (drawn from the old architect's plan; units ≈ 0.84 cm) ----------
-// Which numbered table is where: Claude's first guess, to be corrected by the owner.
+// ---------- the floor plan ----------
+// The approved picture of the main hall (assets/iza_main_hall_v2.webp: a pixel-identical,
+// smaller copy of the owner's iza_main_hall_v2.png, 1254 × 1254), shown unchanged and in
+// proportion. The coloured table markers sit on top in the picture's own pixels.
+// Which number is which table is still Claude's guess, to be corrected by the owner.
+const PLAN_IMAGE = { src: 'assets/iza_main_hall_v2.webp', size: 1254 };
 const PLAN_TABLES = {
-  'שולחן 3':  { x: 375,  y: 525,  w: 140, h: 75 },
-  'שולחן 1':  { x: 375,  y: 742,  w: 95,  h: 92 },
-  'שולחן 2':  { x: 375,  y: 955,  w: 95,  h: 90 },
-  'שולחן 18': { x: 1185, y: 1110, w: 70,  h: 95 },
-  'שולחן 4':  { x: 1185, y: 1325, w: 70,  h: 95 },
-  'שולחן 6':  { x: 1015, y: 1590, w: 240, h: 55 },
-  'שולחן 7':  { x: 225,  y: 1300, w: 120, h: 225 },
+  'שולחן 3':  { x: 303, y: 214,  w: 99,  h: 66 },
+  'שולחן 1':  { x: 303, y: 376,  w: 71,  h: 68 },
+  'שולחן 2':  { x: 303, y: 538,  w: 71,  h: 66 },
+  'שולחן 18': { x: 972, y: 674,  w: 71,  h: 68 },
+  'שולחן 4':  { x: 972, y: 836,  w: 71,  h: 68 },
+  'שולחן 6':  { x: 791, y: 1035, w: 199, h: 33 },
+  'שולחן 7':  { x: 202, y: 820,  w: 75,  h: 165 },
 };
-const BAR_PATH = 'M618,705 L618,1185 L720,1385 L800,1385 L1005,1240 L1005,830 L935,690';
-const WALLS = ['M365,415 L365,1105 L330,1105 L40,1275 L40,1320', 'M40,1530 L40,1690 L150,1690', 'M350,1690 L370,1690',
-  'M1255,1690 L1285,1690 L1285,415 L1100,415', 'M1010,415 L800,415', 'M680,415 L365,415',
-  'M530,415 L530,45 L1610,45 L1610,1260 L1305,1260 L1305,415', 'M840,380 L840,700'];
-const GLASS = ['M150,1690 L350,1690', 'M370,1690 L690,1690', 'M1005,1690 L1255,1690', 'M40,1320 L40,1530'];
+const BAR_AREA = { x: 428, y: 282, w: 455, h: 622 };   // tapping anywhere on the bar opens it
 
 // Late: tonight's confirmed booking whose time has passed and isn't marked "הגיעו".
 // After 15 minutes (the bar's rule) the table may be released.
@@ -376,34 +370,25 @@ const lateTag = r => { const m = minutesLate(r);
 function planSvg(d) {
   const tables = d.tables.filter(t => t.kind === 'table' && PLAN_TABLES[t.name]);
   const bar = d.tables.find(t => t.kind === 'bar_pool');
-  const steps = Array.from({ length: 16 }, (_, i) => `<line x1="1165" x2="1265" y1="${650 + i * 22}" y2="${650 + i * 22}"/>`).join('');
+  const n = PLAN_IMAGE.size;
   const tblSvg = tables.map(t => {
     const p = PLAN_TABLES[t.name], r = d.byTable[t.id], st = tableState(r);
     const moveCls = moving ? (r && r.id !== moving.id ? ' taken' : !r ? ' target' : '') : '';
-    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, big = p.h >= 90 && p.w >= 90;
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, big = p.h >= 120;
     return `<g class="tbl ${st}${moveCls}" data-table="${t.id}" role="button" aria-label="${esc(t.name)}${r ? ' · ' + esc(r.customer_name) : ' · פנוי'}">
       <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>
-      <text class="num" x="${cx}" y="${big && r ? cy - 20 : cy}">${tableNumber(t)}</text>
-      ${r && big ? `<text class="who" x="${cx}" y="${cy + 30}" direction="ltr">${minutesLate(r) ? `+${minutesLate(r)}′` : r.arrival_time.slice(0, 5)}</text>` : ''}
+      <text class="num" x="${cx}" y="${big && r ? cy - 22 : cy}">${tableNumber(t)}</text>
+      ${r && big ? `<text class="who" x="${cx}" y="${cy + 24}" direction="ltr">${minutesLate(r) ? `+${minutesLate(r)}′` : r.arrival_time.slice(0, 5)}</text>` : ''}
     </g>`;
   }).join('');
   const barUsed = d.barRows.reduce((s, r) => s + r.guests, 0);
-  return `<svg viewBox="15 395 1295 1320" role="img" aria-label="תוכנית הבר" id="plan">
-    <polygon class="p-service" points="530,45 1610,45 1610,1260 1285,1260 1285,415 530,415"/>
-    <polygon class="p-floor" points="365,415 1285,415 1285,1690 40,1690 40,1275 330,1105 365,1105"/>
-    <g class="p-stairs">${steps}<rect x="1165" y="650" width="100" height="352"/></g>
-    <text class="p-label" x="1215" y="1060" style="font-size:24px">מדרגות</text>
-    ${WALLS.map(w => `<path class="p-wall" d="${w}"/>`).join('')}
-    ${GLASS.map(w => `<path class="p-glass" d="${w}"/>`).join('')}
+  return `<svg viewBox="0 0 ${n} ${n}" role="img" aria-label="תוכנית הבר" id="plan">
+    <image href="${PLAN_IMAGE.src}" x="0" y="0" width="${n}" height="${n}"/>
     <g class="bar-hit" data-table="${bar ? bar.id : ''}" role="button" aria-label="בר">
-      <path class="p-bar" d="${BAR_PATH}"/>
-      <rect class="p-work" x="640" y="760" width="45" height="420"/><rect class="p-work" x="925" y="880" width="50" height="310"/>
-      <rect class="p-work" x="795" y="1030" width="60" height="140"/>
-      <text class="bar-count" x="810" y="1290">בר</text>
-      <text class="bar-count" x="810" y="1345" id="barCount" direction="ltr">${barUsed}/${bar ? bar.pool_capacity : 12}</text>
+      <rect class="bar-area" x="${BAR_AREA.x}" y="${BAR_AREA.y}" width="${BAR_AREA.w}" height="${BAR_AREA.h}"/>
+      <rect class="bar-pill" x="575" y="915" width="150" height="56" rx="28"/>
+      <text class="bar-count" x="650" y="944"><tspan>בר </tspan><tspan id="barCount" direction="ltr">${barUsed}/${bar ? bar.pool_capacity : 12}</tspan></text>
     </g>
-    <text class="p-label" x="740" y="1665">כניסה</text>
-    <text class="p-label" x="190" y="1660">לאונג׳</text>
     ${tblSvg}
   </svg>`;
 }
