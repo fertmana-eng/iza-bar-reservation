@@ -205,6 +205,7 @@ function waLink(r, approve) {
   const when = `${formatDisplay(r.reservation_date || currentDate)} בשעה ${r.arrival_time.slice(0, 5)}`;
   const text = approve
     ? `שלום ${r.customer_name}, ההזמנה שלך ל${BUSINESS_NAME} אושרה ✳\n${when}, שולחן ל-${r.guests}.\nנחכה עד 15 דקות משעת ההזמנה. מחכים לך!`
+      + (r.access_token ? `\nלצפייה, שינוי או ביטול: ${new URL('booking.html#' + r.access_token, location.href).href}` : '')
     : `שלום ${r.customer_name}, תודה שפנית ל${BUSINESS_NAME}. מצטערים, לא נוכל לאשר את ההזמנה ל-${when}. נשמח לראות אותך בפעם אחרת!`;
   return `https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`;
 }
@@ -223,7 +224,7 @@ async function renderList(quiet) {
   const { data: tables, error: tablesError } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
   const { data: rows, error: resError } = await db
     .from('reservations')
-    .select('id,reservation_date,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status')
+    .select('id,reservation_date,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status,access_token')
     .eq('reservation_date', currentDate)
     .in('status', ['confirmed', 'pending'])
     .order('arrival_time');

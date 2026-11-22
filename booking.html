@@ -109,9 +109,21 @@ async function load(quiet) {
   if (!b) return showNotFound();
   const changed = !booking || ['status', 'note', 'can_change', 'can_cancel'].some(k => booking[k] !== b[k]);
   booking = b;
+  remember(b);
   // don't redraw under someone typing a comment
   if (quiet && (!changed || document.activeElement?.id === 'noteInput')) return;
   render();
+}
+
+// Same list as the booking page's "ההזמנות שלי" (index.html, rememberBooking)
+function remember(b) {
+  try {
+    const key = 'izabar_my_bookings', list = JSON.parse(localStorage.getItem(key)) || [];
+    const active = b.status === 'confirmed' || b.status === 'pending';
+    const others = list.filter(x => x.token !== token);
+    const next = active ? [{ token, date: b.reservation_date, time: b.arrival_time.slice(0, 5), guests: b.guests }, ...others] : others;
+    localStorage.setItem(key, JSON.stringify(next.slice(0, 10)));
+  } catch (e) { /* private browsing: nothing is remembered */ }
 }
 
 function showNotFound() {
