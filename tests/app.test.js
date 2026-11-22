@@ -44,7 +44,10 @@ describe('customer booking page',()=>{
     await page.click('#submitBtn');await page.waitForSelector('.success');
     const [call]=await rpcCalls(page,'book_reservation');
     assert.deepEqual(call.args,{p_date:'2026-11-25',p_time:'17:15',p_name:'דנה כהן',p_phone:'050-1234567',p_guests:3,p_note:'יום הולדת'});
-    assert.match(await text(page,'.success'),/ההזמנה אושרה.*דנה כהן, שולחן ל-3 סועדים.*25\.11 בשעה 17:15/);
+    // the confirmation is the booking card picture only (owner's request), described for screen readers
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, שולחן ל-3 סועדים, 25.11 בשעה 17:15');
+    assert.equal(await text(page,'.success'),'');
     assert.ok(await page.isVisible('.btn-whatsapp'));assert.ok(await page.isVisible('#icsBtn'));
     assert.equal((await page.evaluate(()=>__ops.filter(o=>o.fn))).length,0,'no email is requested');
     assert.deepEqual(errors,[]);await ctx.close();
@@ -62,6 +65,13 @@ describe('customer booking page',()=>{
     assert.deepEqual(await page.evaluate(()=>window.__shared),[['izabar-booking.png|image/png|true']]);
     assert.equal(ctx.pages().length,pages,'no WhatsApp text link opened');
     assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('if the picture cannot be drawn, the confirmation is shown as text',async()=>{
+    const {page,ctx}=await open({time:MORNING,init:()=>{HTMLCanvasElement.prototype.getContext=()=>null;}});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardFallback:not([hidden])');
+    assert.match(await text(page,'.success'),/ההזמנה אושרה.*דנה כהן, שולחן ל-3 סועדים.*25\.11 בשעה 17:15/);
+    assert.equal(await page.isVisible('#cardPreview'),false);
+    assert.ok(await page.isVisible('#waLink'));await ctx.close();
   });
   test('where pictures cannot be shared, the WhatsApp button sends the text as before',async()=>{
     const {page,ctx}=await open({time:MORNING});
@@ -115,8 +125,8 @@ describe('customer booking page',()=>{
     assert.equal(await page.inputValue('#nameInput'),evil);
     await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
     assert.ok((await text(page,'.summary-box')).includes(evil));
-    await page.click('#submitBtn');await page.waitForSelector('.success');await page.waitForTimeout(200);
-    assert.ok((await text(page,'.success')).includes(evil));
+    await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.ok((await page.getAttribute('#cardPreview','alt')).includes(evil));
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview)').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
