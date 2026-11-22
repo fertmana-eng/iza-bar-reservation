@@ -6,6 +6,7 @@
 //   bookResult ('confirmed' by default; 'pending', 'full', 'closed', 'invalid', 'invalid_time'),
 //   rpcError (name of an RPC that should fail), reservations (rows for the manager page),
 //   token (secret returned with a new booking), bookings (rows for booking.html, with access_token),
+//   changeResult (answer of change_booking; 'confirmed' by default),
 //   noSession (manager not logged in), loginError ('wrong' or 'network'), failTables[] (reads that fail).
 // NOTE: this fake has no access rules, so it cannot catch a database rule that
 // refuses the page's own requests. Those are checked on the real database.
@@ -64,6 +65,16 @@
       const bk=(db.bookings||[]).find(b=>b.access_token===args?.p_token);
       if(name==='get_booking'){if(!bk)return {data:[],error:null};const {access_token,...row}=bk;return {data:[row],error:null};}
       if(name==='update_booking_note'){if(!bk)return {data:'not_found',error:null};if(!bk.can_change)return {data:'locked',error:null};bk.note=args.p_note||null;return {data:'saved',error:null};}
+      if(name==='change_booking'){if(!bk)return {data:'not_found',error:null};const res=cfg.changeResult||'confirmed';
+        if(res==='confirmed'||res==='pending'){
+          if(res==='pending'&&bk.status==='confirmed')Object.assign(bk,{prev_date:bk.reservation_date,prev_time:bk.arrival_time,prev_guests:bk.guests});
+          if(res==='confirmed')Object.assign(bk,{prev_date:null,prev_time:null,prev_guests:null});
+          Object.assign(bk,{reservation_date:args.p_date,arrival_time:args.p_time+':00',guests:args.p_guests,status:res});}
+        return {data:res,error:null};}
+      if(name==='decide_request'){const r=db.reservations.find(x=>x.id===args.p_id);if(!r)return {data:'not_found',error:null};
+        if(args.p_approve){Object.assign(r,{status:'confirmed',prev:null});return {data:'confirmed',error:null};}
+        if(r.prev){Object.assign(r,{...r.prev,status:'confirmed',prev:null});return {data:'reverted',error:null};}
+        r.status='declined';return {data:'declined',error:null};}
       if(name==='cancel_booking'){if(!bk)return {data:'not_found',error:null};if(!['confirmed','pending'].includes(bk.status))return {data:bk.status,error:null};
         Object.assign(bk,{status:'cancelled',cancelled_by:'customer',can_change:false,can_cancel:false});return {data:'cancelled',error:null};}
       return {data:null,error:{message:'unknown function '+name}};
