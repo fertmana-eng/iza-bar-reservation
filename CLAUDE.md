@@ -31,7 +31,7 @@ Same owner as the IzaZoo management app (repository
   welcome text → date (up to 30 days ahead) → number of guests (1–10) →
   arrival time (17:00–21:00, 15-minute steps) → name and phone → summary with
   optional note → confirmation with "send to my WhatsApp" and "add
-  to calendar". Same-day online booking closes at 17:00. Outdoor seating can't
+  to calendar", and a preview of the booking card. Same-day online booking closes at 17:00. Outdoor seating can't
   be booked (walk-in only), as the welcome text says.
 - `admin.html`: the manager page: login first, then the bookings of a chosen
   day grouped into high tables / low tables / bar, with totals, a cancel
@@ -104,14 +104,7 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. WhatsApp confirmation as a file instead of text (owner's wish, Nov 2026).
-   A web page can't attach a file to a wa.me link and can't send from the
-   bar's WhatsApp (that needs the paid WhatsApp Business API). Proposed: a
-   "share" button (Web Share API with a file) that opens the phone's share
-   sheet; the customer picks WhatsApp. Recommended format: a picture of a
-   booking card (Hebrew renders natively, shows inline in WhatsApp) rather
-   than a PDF (needs a PDF library with an embedded Hebrew font). Waiting for
-   the owner's choice.
+1. Owner checks the WhatsApp picture on the phone.
 2. New features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
@@ -156,7 +149,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (27 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (29 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
@@ -189,6 +182,13 @@ with a fixed clock in Israel time.
 - Nov 2026: customer text escaped on both pages.
 - Nov 2026: limits inside the database (08) and matching checks on the page;
   email option removed (owner's decision).
+- Nov 2026: WhatsApp confirmation as a picture (owner's choice over PDF): a
+  1080×1350 booking card drawn on the phone (bar name, name, weekday and
+  date, time, guests, the 15-minute rule, booking number). "שליחה לוואטסאפ
+  שלי" opens the phone's share sheet with the picture (the customer picks
+  WhatsApp; a page can't attach files to a WhatsApp link or send from the
+  bar's number, which needs the paid WhatsApp Business API). Where files
+  can't be shared (most computers) it sends the text message as before.
 - Nov 2026 (experiment, not part of this site): a 3D model of the bar from an
   old architect's plan, with tappable seats, as a private claude.ai artifact
   ("עיזה בר – בחירת מקומות", https://claude.ai/artifact/XodKCTKkfWuZLcSuZokYxM;
