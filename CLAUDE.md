@@ -47,9 +47,10 @@ Same owner as the IzaZoo management app (repository
   inactivity and was paused in Nov 2026). Only the publishable key is in the
   pages. The supabase-js library is loaded from a CDN (jsdelivr, unpinned
   version `@2`); IzaZoo uses a bundled copy instead.
-- Hosting: not decided. The original setup notes (README.md, in Hebrew) say
-  Netlify. This repository is private; GitHub Pages from a private repository
-  needs a paid GitHub plan.
+- Hosting: the repository is connected to **Cloudflare** ("Workers Builds:
+  iza-bar-reservation" runs on every pull request and on `main`), so the site
+  is most likely published from there (the original README said Netlify).
+  Confirm the public address with the owner.
 - Database changes and the edge function are kept in `supabase/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
@@ -87,7 +88,7 @@ Same owner as the IzaZoo management app (repository
    database, write a saved real-database check (`tests/db/checks.sql`, like
    IzaZoo's) and fix problems 1–2 (security first).
 2. Fix 3–6, one change each.
-3. Decide hosting with the owner.
+3. Confirm the Cloudflare address with the owner; the booking link goes there.
 4. Then new features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
