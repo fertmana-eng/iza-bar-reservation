@@ -630,10 +630,16 @@ describe('personal booking page (booking.html#secret)',()=>{
     assert.match(await text(page,'#msg'),/ההתראות חסומות בטלפון.*נעדכן אתכם גם בוואטסאפ/);
     assert.equal(await page.evaluate(()=>__ops.filter(o=>o.rpc==='save_push_subscription').length),0);await ctx.close();
   });
-  test('no notification button for a confirmed booking; an iPhone without the home screen gets a hint',async()=>{
+  test('a confirmed booking offers a reminder 2 hours before; an iPhone without the home screen gets a hint',async()=>{
     const confirmed=await openBooking({},{init:fakePush('granted')});
-    await confirmed.page.waitForSelector('#cancelBtn');
-    assert.equal(await confirmed.page.isVisible('#pushBtn'),false);await confirmed.ctx.close();
+    await confirmed.page.waitForSelector('#pushBtn');
+    assert.equal(await text(confirmed.page,'#pushBtn'),'🔔 קבלו תזכורת שעתיים לפני');
+    await confirmed.page.click('#pushBtn');await confirmed.page.waitForSelector('#pushOn');
+    assert.match(await text(confirmed.page,'#msg'),/מעולה! תקבלו תזכורת בטלפון כשעתיים לפני ההגעה/);
+    assert.equal(await text(confirmed.page,'#pushOn'),'🔔 תקבלו תזכורת בטלפון כשעתיים לפני ההגעה.');await confirmed.ctx.close();
+    const past=await openBooking({can_change:false,can_cancel:false},{init:fakePush('granted')});      // the day is over: nothing to remind
+    await past.page.waitForSelector('#statusLabel');
+    assert.equal(await past.page.isVisible('#pushBtn'),false);await past.ctx.close();
     const iphone=await openBooking({status:'pending'},{userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
       init:()=>{delete window.PushManager;}});
     await iphone.page.waitForSelector('#pushIphone');

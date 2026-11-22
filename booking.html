@@ -141,11 +141,14 @@ function keyBytes(b64) {
   const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from(s, c => c.charCodeAt(0));
 }
+// Waiting for approval: a notification with the bar's answer. Confirmed (owner, Nov 2026):
+// a reminder about 2 hours before (sent by the server function send-reminders).
 function notifyHtml(b) {
-  if (b.status !== 'pending') return '';
+  const pending = b.status === 'pending';
+  if (!pending && !(b.status === 'confirmed' && b.can_cancel)) return '';
   if (PUSH_OK) return pushOn()
-    ? `<p class="hint" id="pushOn">🔔 תקבלו התראה בטלפון כשנאשר.</p>`
-    : `<button type="button" class="btn-outline" id="pushBtn">🔔 קבלו התראה כשנאשר</button>`;
+    ? `<p class="hint" id="pushOn">🔔 ${pending ? 'תקבלו התראה בטלפון כשנאשר' : 'תקבלו תזכורת בטלפון כשעתיים לפני ההגעה'}.</p>`
+    : `<button type="button" class="btn-outline" id="pushBtn">🔔 ${pending ? 'קבלו התראה כשנאשר' : 'קבלו תזכורת שעתיים לפני'}</button>`;
   if (IS_IPHONE) return `<p class="hint" id="pushIphone">באייפון התראות עובדות רק אם מוסיפים את האתר למסך הבית. נעדכן אתכם גם בוואטסאפ.</p>`;
   return '';
 }
@@ -165,7 +168,7 @@ async function enablePush() {
         { p_token: token, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
       if (!error && data === 'saved') {
         try { localStorage.setItem(pushKey(), '1'); } catch (e) {}
-        message = { ok: true, text: 'מעולה! תקבלו התראה כשנאשר.' };
+        message = { ok: true, text: booking.status === 'pending' ? 'מעולה! תקבלו התראה כשנאשר.' : 'מעולה! תקבלו תזכורת בטלפון כשעתיים לפני ההגעה.' };
       } else message = { text: 'לא הצלחנו להפעיל התראות. נעדכן אתכם בוואטסאפ.' };
     }
   } catch (e) {
