@@ -117,9 +117,9 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Owner runs `09_approval_window.sql` (dry run passed); then run
-   `tests/db/checks.sql`; then the owner tries a request between 16:00 and
-   20:00 and approves it on the manager page.
+1. `09_approval_window.sql` run by the owner (22 Nov 2026);
+   `tests/db/checks.sql`: ALL 25 PASSED. The owner will test a request
+   between 16:00 and 20:00 and approve/decline it on the manager page later.
 2. New features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
@@ -217,6 +217,9 @@ with a fixed clock in Israel time.
 
 ## Lessons learned
 
+- **In `tests/db/checks.sql`, don't name a table alias `r`**: the block
+  already has a loop variable `r`, and PL/pgSQL mixes them up ("record r has
+  no field ...").
 - **In tests, never compare a page element object with `assert`.** When the
   check fails, Node tries to print the whole browser object and runs out of
   memory (the session's processes get killed). Compare plain values

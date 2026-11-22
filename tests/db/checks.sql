@@ -72,7 +72,7 @@ begin
   n := public.available_spots(d);
   insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status)
     select d,'19:00','בדיקה ממתינה','050-0000000',2,id,'table','pending' from public.venue_tables
-    where kind='table' and active and not exists(select 1 from public.reservations r where r.assigned_table_id=venue_tables.id and r.reservation_date=d and r.status in ('confirmed','pending')) limit 1;
+    where kind='table' and active and not exists(select 1 from public.reservations x where x.assigned_table_id=venue_tables.id and x.reservation_date=d and x.status in ('confirmed','pending')) limit 1;
   if public.available_spots(d)<>n-1 then failed:=failed||'a pending request does not hold its table'::text; end if;
 
   -- ---------- as the public (anyone with the page's key) ----------
