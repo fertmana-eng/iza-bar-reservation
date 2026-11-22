@@ -153,7 +153,7 @@ Same owner as the IzaZoo management app (repository
    "בוטלו ע״י הלקוח" list. Part A applied via the connector; part B
    (`11b_booking_changes_replace.sql`: book_reservation / check_availability
    / available_spots use the helpers; get_booking returns the original's
-   details) to be run by the owner. Dry run at 17:31 Israel time passed
+   details) run by the owner 22 Nov 2026. Dry run at 17:31 Israel time passed
    (request, change, decline restores, approve frees the original, locked,
    invalid, public can't approve).
    Step 4 built (22 Nov 2026, `12_push_notifications.sql`, applied via the
@@ -167,7 +167,11 @@ Same owner as the IzaZoo management app (repository
    `app_secrets` (key values are only in the database, never in the repo;
    the public half is in booking.html). A real phone notification can't be
    tested from Claude's machine: the owner checks it on Android.
-   Database check: ALL 50 PASSED (before the owner runs 11b). Step 2 of accounts (optional sign-in, history)
+   Database check after 11b: ALL 50 PASSED. **The owner tests steps 1-4
+   together next** (test plan given in the conversation: book for tomorrow,
+   send the link, change, cancel; between 16:00 and 20:00 on Android: book
+   for today, turn on the notification, approve on the tablet, change and
+   decline). Step 2 of accounts (optional sign-in, history)
    later. Reminders: customer sign-in would change the database's "logged in
    = manager" rule (must become an explicit manager role); SMS sign-in costs
    money per message; Apple sign-in needs a paid developer account; iPhone

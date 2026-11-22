@@ -70,6 +70,13 @@ begin
             and table_name in ('push_subscriptions','app_secrets') and grantee in ('anon','authenticated'))
      or not exists(select 1 from public.app_secrets where key='vapid_private')
     then failed:=failed||'notifications: tables not locked, or the key is missing'::text; end if;
+  -- 11b: every booking path uses the shared helpers, and the link shows a waiting change's original
+  total:=total+1;
+  if (select count(*) from pg_proc where pronamespace='public'::regnamespace
+        and proname in ('book_reservation','check_availability') and prosrc like '%find_place%')<>2
+     or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='available_spots' and prosrc like '%table_taken%')
+     or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='get_booking' and 'prev_date'=any(proargnames))
+    then failed:=failed||'11b not applied: booking functions do not use the shared helpers'::text; end if;
   total:=total+1;
   if has_function_privilege('anon','public.decide_request(bigint,boolean)','EXECUTE')
      or not has_function_privilege('authenticated','public.decide_request(bigint,boolean)','EXECUTE')
@@ -90,7 +97,7 @@ begin
   n := public.available_spots(d);
   insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status)
     select d,'19:00','בדיקה ממתינה','050-0000000',2,id,'table','pending' from public.venue_tables
-    where kind='table' and active and not exists(select 1 from public.reservations x where x.assigned_table_id=venue_tables.id and x.reservation_date=d and x.status in ('confirmed','pending')) limit 1;
+    where kind='table' and active and not public.table_taken(id,d,null) order by id limit 1;
   if public.available_spots(d)<>n-1 then failed:=failed||'a pending request does not hold its table'::text; end if;
 
   -- ---------- as the public (anyone with the page's key) ----------
