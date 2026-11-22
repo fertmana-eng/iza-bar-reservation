@@ -74,6 +74,10 @@ Same owner as the IzaZoo management app (repository
   the right wall; 6 the window counter; 7 the lounge): the owner corrects it.
   Not mapped: the small wooden table with stools at the bar's lower-left
   corner in the picture (ask the owner whether it is a table of its own).
+  **Owner, 22 Nov 2026: neither the picture nor the table numbers are final;
+  the owner is building the infrastructure first so the real plan and
+  seating can be dropped in quickly.** Keep the plan easy to swap (picture
+  file + one list of table positions).
   The handoff (ChatGPT, Nov 2026) planned a later data-driven overlay with
   normalized 0-1 coordinates stored in the data model; today positions are
   constants in admin.html.
