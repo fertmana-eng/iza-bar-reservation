@@ -47,11 +47,28 @@ Same owner as the IzaZoo management app (repository
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
-- `admin.html`: the manager page: login first, then the bookings of a chosen
-  day: "ממתינות לאישור" first (אישור / דחייה: saves the answer and opens
-  WhatsApp to the customer's number with a ready message; the manager presses
-  send), then high tables / low tables / bar, with totals, a cancel button and
-  "יציאה" (sign out). It refreshes quietly every minute and when reopened.
+- `admin.html`: the manager's evening screen (owner's design request, 22 Nov
+  2026; tablet in landscape, kept with the restaurant's WhatsApp): login,
+  then a top bar (‹ date › arrows, weekday and date, "+ הזמנה חדשה",
+  "יציאה"), the evening's totals, and side by side: the **floor plan** (SVG
+  drawn from the old architect's plan; tables coloured free / booked /
+  waiting / arrived; the bar shows used/12 seats) and the **sheet** modelled
+  on the bar's paper sheet (שולחן | שם | שעה | סועדים | הערות; one row per
+  table 1, 2, 3, 4, 6, 7, 18, then one row per bar booking, then "+ הוספה
+  לבר"), with "ממתינות לאישור" (אישור / דחייה → WhatsApp) above it and
+  "בוטלו ע״י הלקוח" below. Tapping a table (plan or sheet) opens a side
+  panel: booked → הגיעו ✓, move to another table (then tap the new table;
+  taken tables refused, a different-size table allowed with a warning),
+  WhatsApp to the customer, cancel; waiting → approve / decline; free →
+  add a booking there. Manager bookings (phone / WhatsApp / walk-in) are
+  confirmed at once, any time 12:00-23:45, 1-20 guests, name and phone
+  optional. Database: `13_manager_floor.sql` (applied via the connector:
+  `arrived_at`, `set_arrived`, `move_booking`, `manager_add_booking`,
+  manager only). **Which number is which table on the plan is Claude's
+  guess** (`PLAN_TABLES` in admin.html: 3, 1, 2 on the left wall; 18, 4 on
+  the right wall; 6 the window counter; 7 the lounge): the owner corrects it.
+  Refreshes quietly every minute (not while a panel is open or a move is
+  being chosen).
 - Login (owner's decision, Nov 2026): **one user only, the restaurant**,
   username `izabar`. Supabase logins need an email, so the page turns the
   username into `izabar@izabar.local` (not a real inbox; created by the owner
@@ -221,7 +238,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (61 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (68 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
