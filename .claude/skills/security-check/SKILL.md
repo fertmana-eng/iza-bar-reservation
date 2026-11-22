@@ -1,6 +1,6 @@
 ---
 name: security-check
-description: Security check for reservation changes that touch customer data, the manager page, logins, the database or the send-confirmation edge function. Use before merging such a change, or when the owner types /security-check.
+description: Security check for reservation changes that touch customer data, the manager page, logins or the database. Use before merging such a change, or when the owner types /security-check.
 ---
 
 # Security check
@@ -37,9 +37,8 @@ page, so anything the "anon" role can reach, anyone on the internet can reach.
    UPDATE/DELETE there; they trigger a confirmation prompt that times out —
    check those rules by reading the policy). The tests in `tests/` use a fake
    database with no access rules, so they can't catch this.
-5. **Edge function `send-confirmation`:** compare the deployed code with
-   `supabase/functions/send-confirmation/index.ts`. It must not let strangers
-   send arbitrary emails, and customer text in the email must be escaped.
+5. **Edge functions:** the project has none (emails were dropped, Nov 2026).
+   If one is added, it must not let strangers send messages or read data.
 6. **Page code:** no passwords or keys (other than the publishable key) in the
    pages; anything built from customer text (name, note) is escaped before it
    is shown, especially on the manager page.
