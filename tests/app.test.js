@@ -101,6 +101,27 @@ describe('customer booking page',()=>{
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
+  test('a wrong phone number or email is explained before anything is sent',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');
+    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');
+    await page.waitForSelector('#timeNext');await page.click('#timeNext');
+    await page.fill('#nameInput','דנה');await page.fill('#phoneInput','abc');
+    await page.click('#detailsForm button[type=submit]');
+    assert.match(await text(page,'#detailsError'),/מספר הטלפון לא תקין/);
+    await page.fill('#phoneInput','+972 50-123-4567');await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
+    await page.fill('#emailInput','dana@');await page.click('#submitBtn');
+    assert.match(await text(page,'#submitError'),/כתובת האימייל לא תקינה/);
+    assert.equal((await rpcCalls(page,'book_reservation')).length,0);
+    await page.fill('#emailInput','');await page.click('#submitBtn');await page.waitForSelector('.success');
+    await ctx.close();
+  });
+  test('if the database refuses the details, the customer is told to check them',async()=>{
+    const {page,ctx}=await open({time:MORNING,cfg:{bookResult:'invalid'}});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForTimeout(200);
+    assert.match(await text(page,'#submitError'),/אחד הפרטים לא תקין/);
+    assert.ok(await page.isEnabled('#submitBtn'));await ctx.close();
+  });
   test('a date with no free places shows a message and stays on the calendar',async()=>{
     const {page,ctx}=await open({time:MORNING,cfg:{spots:0}});
     await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');
