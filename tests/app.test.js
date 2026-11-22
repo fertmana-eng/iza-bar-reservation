@@ -332,8 +332,8 @@ describe('manager page',()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]}});
     const [wa]=await Promise.all([ctx.waitForEvent('page'),page.click('.approve-btn')]);   // WhatsApp opens (the address is checked above; the internet is off in tests)
     assert.ok(wa);
-    await page.waitForTimeout(300);
-    assert.equal(await page.evaluate(()=>__db.reservations[0].status),'confirmed');
+    await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
+    await page.waitForFunction(()=>/1 הזמנות/.test(document.getElementById('listContent').innerText),null,{timeout:10000});
     assert.match(await text(page,'#listContent'),/1 הזמנות · 4 סועדים/);
     assert.equal(await page.isVisible('.pending-card'),false);await ctx.close();
   });
@@ -341,9 +341,13 @@ describe('manager page',()=>{
     for(const [dismiss,expected] of [[false,'declined'],[true,'pending']]){
       const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]},dismissDialogs:dismiss});
       const popups=[];ctx.on('page',p=>popups.push(p));
-      await page.click('.decline-link');await page.waitForTimeout(400);
+      // wait for the WhatsApp window when declining (slow machines need more than a fixed pause)
+      const opened=dismiss?null:ctx.waitForEvent('page',{timeout:10000});
+      await page.click('.decline-link');
+      if(opened)await opened;
+      await page.waitForFunction(s=>__db.reservations[0].status===s,expected,{timeout:10000});
+      await page.waitForTimeout(300);
       assert.deepEqual(dialogs,['לדחות את הבקשה? השולחן ישתחרר.']);
-      assert.equal(await page.evaluate(()=>__db.reservations[0].status),expected);
       assert.equal(popups.length,dismiss?0:1,'WhatsApp opens only when declining');await ctx.close();
     }
   });
