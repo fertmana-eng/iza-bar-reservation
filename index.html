@@ -275,8 +275,20 @@ let guestsWarning = null;
 
 const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '', email: '' };
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
-function toDateStr(d) { return d.toISOString().slice(0, 10); }
+// All dates and times are the restaurant's (Israel), whatever the phone's
+// time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
+// own numbers (never toISOString, which shifts to UTC and moved every day back).
+function israelNow() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date()).map(p => [p.type, p.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+function todayStr() { return israelNow().date; }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function toDateStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function fromDateStr(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
 function formatDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
@@ -364,17 +376,14 @@ function bindSummaryClicks() {
 async function init() {
   pageSettings = await getSettings();
 
-  const minD = new Date(); minD.setHours(0,0,0,0);
+  const now = israelNow();
+  const minD = fromDateStr(now.date);
   const maxD = new Date(minD); maxD.setDate(maxD.getDate() + BOOKING_WINDOW_DAYS);
   minDate = minD; maxDate = maxD;
 
-  let initial = todayStr();
-  const nowTime = new Date().toTimeString().slice(0,5);
-  if (nowTime > pageSettings.cutoff) {
-    const d = new Date(initial + 'T00:00:00'); d.setDate(d.getDate() + 1);
-    initial = toDateStr(d);
-  }
-  viewMonth = new Date(new Date(initial + 'T00:00:00').getFullYear(), new Date(initial + 'T00:00:00').getMonth(), 1);
+  const initial = fromDateStr(now.date);
+  if (now.time > pageSettings.cutoff) initial.setDate(initial.getDate() + 1);
+  viewMonth = new Date(initial.getFullYear(), initial.getMonth(), 1);
 
   renderIntro();
 }
@@ -462,10 +471,9 @@ async function checkDateAndContinue() {
   btn.disabled = true;
   btn.textContent = 'בודק זמינות...';
 
-  const isToday = dStr === todayStr();
-  if (isToday) {
-    const nowTime = new Date().toTimeString().slice(0,5);
-    if (nowTime > pageSettings.cutoff) {
+  const now = israelNow();
+  if (dStr === now.date) {
+    if (now.time > pageSettings.cutoff) {
       dateWarning = 'ההזמנות המקוונות ליום זה נסגרו. נסו תאריך אחר.';
       formData.date = null;
       renderDateStep();
