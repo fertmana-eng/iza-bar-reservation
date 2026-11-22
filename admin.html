@@ -237,8 +237,11 @@ async function setStatus(id, status) {
 // Approving or declining a request or a change goes through the database, which also
 // restores the original booking when a change is declined (11_booking_changes.sql)
 async function decide(id, approve) {
-  const { error } = await db.rpc('decide_request', { p_id: Number(id), p_approve: approve });
+  const { data, error } = await db.rpc('decide_request', { p_id: Number(id), p_approve: approve });
   if (error) saveError = 'התשובה לא נשמרה. בדקו את החיבור ונסו שוב.';
+  // a phone notification too, if the customer asked for one (server function notify-booking)
+  else if (['confirmed', 'reverted', 'declined'].includes(data))
+    db.functions.invoke('notify-booking', { body: { id: Number(id), result: data } }).catch(() => {});
   renderList();
 }
 let saveError = null;

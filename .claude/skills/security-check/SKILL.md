@@ -37,8 +37,11 @@ page, so anything the "anon" role can reach, anyone on the internet can reach.
    UPDATE/DELETE there; they trigger a confirmation prompt that times out —
    check those rules by reading the policy). The tests in `tests/` use a fake
    database with no access rules, so they can't catch this.
-5. **Edge functions:** the project has none (emails were dropped, Nov 2026).
-   If one is added, it must not let strangers send messages or read data.
+5. **Edge function `notify-booking`** (Android notifications): compare the
+   deployed code with `supabase/functions/notify-booking/index.ts`. It must
+   refuse callers who aren't the logged-in manager, and read the
+   notification keys only from the locked `app_secrets` table (never from
+   the code; the repository is public).
 6. **Page code:** no passwords or keys (other than the publishable key) in the
    pages; anything built from customer text (name, note) is escaped before it
    is shown, especially on the manager page.
