@@ -71,13 +71,9 @@ Same owner as the IzaZoo management app (repository
 
 ## Known problems (found Nov 2026, not fixed yet)
 
-1. **Customer details are open to anyone.** `03_admin_policies.sql` lets the
-   anon role read all reservations (names, phones, emails) and update them
-   (cancel), and read all tables. Being fixed: the manager login is in
-   `admin.html`; the database change is `supabase/migrations/06_manager_login.sql`
-   (given to the owner to run; it drops rules, so the connector can't apply
-   it). After it runs, `tests/db/checks.sql` must report ALL PASSED (before it,
-   6 of 17 fail).
+1. ~~Customer details open to anyone~~: fixed 22 Nov 2026 (manager login +
+   `06_manager_login.sql`, run by the owner; user `izabar` created; public
+   sign-up switched off by the owner). `tests/db/checks.sql`: ALL 17 PASSED.
 2. ~~`check_availability` missing~~: it exists in the real database (created
    by hand in Sept); now saved as `supabase/migrations/05_check_availability.sql`.
 3. **Time zone.** The database's `current_date`/`current_time` are UTC, so the
@@ -97,8 +93,7 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Finish problem 1: the owner creates the `izabar` user, turns public
-   sign-up off and runs `06_manager_login.sql`; then run `tests/db/checks.sql`.
+1. Owner checks the login and a test booking on the phone.
 2. Fix 3–6, one change each. Real-database facts (Nov 2026): anon and
    authenticated have every table permission on all three tables (Supabase's
    default), so the policies are the only protection.
@@ -170,7 +165,8 @@ with a fixed clock in Israel time.
 - Nov 2026: published with GitHub Pages (repository made public); the
   database was restored; `check_availability` saved from the live database.
 - Nov 2026: manager login on `admin.html` (one user, `izabar`), sign out, and
-  a message with "נסו שוב" when bookings can't be loaded.
+  a message with "נסו שוב" when bookings can't be loaded. Bookings closed to
+  the public in the database (`06_manager_login.sql`); saved database check.
 
 ## Health checks
 
