@@ -37,10 +37,11 @@
 
   .title-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: center;
     gap: 10px;
   }
+  .venue-logo { display: block; height: 24px; width: auto; }
   .venue-name {
     font-family: 'Heebo', sans-serif;
     font-weight: 900;
@@ -245,7 +246,7 @@
 <body>
 <div class="header-band">
   <div class="title-row">
-    <h1 class="venue-name" id="venueName">עיזה בר</h1>
+    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-white.png" alt="IZAZOO" width="168" height="24"></h1>
     <span class="slash-big">//</span>
     <span class="venue-tag">הזמנת מקומות</span>
   </div>
@@ -269,7 +270,6 @@
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-document.getElementById('venueName').textContent = BUSINESS_NAME;
 
 const stepArea = document.getElementById('stepArea');
 const progressEl = document.getElementById('progress');

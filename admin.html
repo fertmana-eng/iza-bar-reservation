@@ -42,6 +42,8 @@
   .error[hidden], [hidden] { display: none !important; }
 
   /* top bar: date, day, totals */
+  .brand-logo { display: block; height: 24px; width: auto; margin-inline-end: 8px; }
+  .login-logo { height: 28px; margin: 0 auto 18px; }
   .topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .day-nav { display: flex; align-items: center; gap: 6px; }
   .day-nav button { min-width: 44px; padding: 0; font-size: 20px; }
@@ -205,6 +207,7 @@ async function start() {
 function renderLogin() {
   app.innerHTML = `
     <div class="login-wrap">
+      <img class="brand-logo login-logo" src="assets/izazoo-logo-red.png" alt="IZAZOO" width="196" height="28">
       <h1>ניהול הזמנות</h1>
       <form class="card" id="loginForm">
         <input id="userInput" placeholder="שם משתמש" autocomplete="username" autocapitalize="off" spellcheck="false" dir="ltr">
@@ -241,6 +244,7 @@ async function signOut() {
 function renderShell() {
   app.innerHTML = `
     <div class="topbar">
+      <img class="brand-logo" src="assets/izazoo-logo-red.png" alt="IZAZOO" width="168" height="24">
       <div class="day-nav">
         <button type="button" id="prevDay" aria-label="היום הקודם">›</button>
         <input id="dateInput" type="date" value="${currentDate}">

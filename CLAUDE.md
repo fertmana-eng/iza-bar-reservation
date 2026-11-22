@@ -44,6 +44,13 @@ Same owner as the IzaZoo management app (repository
   confirmed at once. Settings: `booking_cutoff` 20:00 (public), `approval_from`
   16:00 (private, read only by the function). The customer's card says "הבקשה
   התקבלה · ממתינה לאישור" and has no "add to calendar".
+- **IZAZOO logo** (owner, 22 Nov 2026): replaces "עיזה בר" in the black
+  header band of `index.html` and `booking.html` (white wordmark,
+  `assets/izazoo-logo-white.png`), and sits at the start of the tablet's top
+  bar and above its login (red, `assets/izazoo-logo-red.png`). Both were cut
+  from the IzaZoo app icon (`icon-512.png` in the IzaZoo repo, white IZAZOO
+  on #D12026) with a see-through background. Still "עיזה בר": the WhatsApp
+  booking card picture (card.js) and the message texts (not asked).
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
@@ -267,7 +274,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (70 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (71 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
