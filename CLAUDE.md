@@ -136,11 +136,11 @@ Same owner as the IzaZoo management app (repository
    manager's approval message, and the phone remembers its upcoming bookings
    (`izabar_my_bookings` in local storage; shown as "ההזמנות שלי" on the
    welcome screen; opening a link adds it, cancelling removes it).
-   **Open issue (owner, 22 Nov 2026): on the owner's phone WhatsApp dropped
-   the caption, so the shared picture arrived without the link.** Fix first
-   next session, e.g. a separate "שליחת הקישור לוואטסאפ" text message (wa.me
-   text always carries the link), or share the text first and the picture
-   second; then check on the owner's phone. Next:
+   On the owner's phone WhatsApp dropped the caption, so the picture arrived
+   without the link: fixed with a second button "שליחת הקישור להזמנה
+   לוואטסאפ" (plain wa.me text, which always keeps the link; shown only where
+   the picture is shared) and "שליחת הקישור לוואטסאפ שלי" on the personal
+   page (owner to test). Next:
    step 2 (change time/guests/date, approval rules, revert on decline,
    manager page shows changes and customer cancellations), then step 4
    (Android notifications). Step 2 of accounts (optional sign-in, history)

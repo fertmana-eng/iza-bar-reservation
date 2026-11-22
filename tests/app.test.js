@@ -66,6 +66,9 @@ describe('customer booking page',()=>{
     // the private link goes along as the picture's caption
     assert.match(await page.evaluate(()=>window.__sharedText),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111-2222-4333-8444-555555555555$/);
     assert.equal(ctx.pages().length,pages,'no WhatsApp text link opened');
+    // WhatsApp may drop the caption: a second button sends the link as plain text
+    assert.ok(await page.isVisible('#waLinkText'));
+    assert.match(decodeURIComponent(await page.getAttribute('#waLinkText','href')),/^https:\/\/wa\.me\/\?text=אישור הזמנה - עיזה בר\n.*\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111-2222-4333-8444-555555555555$/s);
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('if the picture cannot be drawn, the confirmation is shown as text',async()=>{
@@ -80,6 +83,7 @@ describe('customer booking page',()=>{
     await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
     const href=await page.getAttribute('#waLink','href');
     assert.ok(href.startsWith('https://wa.me/?text='));
+    assert.equal(await page.isVisible('#waLinkText'),false,'one button is enough when the text already carries the link');
     assert.match(decodeURIComponent(href),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111/);
     await ctx.close();
   });
@@ -414,6 +418,7 @@ describe('personal booking page (booking.html#secret)',()=>{
     assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, שולחן ל-3 סועדים, 25.11 בשעה 19:00');
     assert.equal(await page.inputValue('#noteInput'),'יום הולדת');
     assert.ok((await page.getAttribute('#barWa','href')).startsWith(BAR_WA+'?text='));
+    assert.match(decodeURIComponent(await page.getAttribute('#sendLink','href')),/^https:\/\/wa\.me\/\?text=ההזמנה שלי לעיזה בר - 25\.11 בשעה 19:00\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111-2222-4333-8444-555555555555$/);
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('opening the link once makes the phone remember the booking; cancelling forgets it',async()=>{
