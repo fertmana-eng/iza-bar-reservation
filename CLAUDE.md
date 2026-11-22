@@ -33,11 +33,22 @@ Same owner as the IzaZoo management app (repository
   optional note → confirmation with "send to my WhatsApp" and "add
   to calendar". The confirmation screen shows only the booking card picture
   (owner: no double presentation); plain text only if the picture can't be
-  drawn. Same-day online booking closes at 17:00. Outdoor seating can't
-  be booked (walk-in only), as the welcome text says.
+  drawn. Outdoor seating can't be booked (walk-in only), as the welcome
+  text says.
+- **Same-day bookings by the hour they are made** (owner's decision, 22 Nov
+  2026; `09_approval_window.sql`): before 16:00 confirmed at once; 16:00–20:00
+  the request is `pending` and holds its table until the manager approves
+  (`confirmed`) or declines (`declined`, frees the table); from 20:00 closed
+  for today. Same-day arrivals at least 30 minutes ahead, rounded up to the
+  quarter hour (the database allows 25 for clock differences). Other days are
+  confirmed at once. Settings: `booking_cutoff` 20:00 (public), `approval_from`
+  16:00 (private, read only by the function). The customer's card says "הבקשה
+  התקבלה · ממתינה לאישור" and has no "add to calendar".
 - `admin.html`: the manager page: login first, then the bookings of a chosen
-  day grouped into high tables / low tables / bar, with totals, a cancel
-  button and "יציאה" (sign out).
+  day: "ממתינות לאישור" first (אישור / דחייה: saves the answer and opens
+  WhatsApp to the customer's number with a ready message; the manager presses
+  send), then high tables / low tables / bar, with totals, a cancel button and
+  "יציאה" (sign out). It refreshes quietly every minute and when reopened.
 - Login (owner's decision, Nov 2026): **one user only, the restaurant**,
   username `izabar`. Supabase logins need an email, so the page turns the
   username into `izabar@izabar.local` (not a real inbox; created by the owner
@@ -106,7 +117,9 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Owner checks the WhatsApp picture on the phone.
+1. Owner runs `09_approval_window.sql` (dry run passed); then run
+   `tests/db/checks.sql`; then the owner tries a request between 16:00 and
+   20:00 and approves it on the manager page.
 2. New features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
@@ -151,7 +164,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (30 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (39 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
@@ -182,6 +195,8 @@ with a fixed clock in Israel time.
 - Nov 2026: "add to calendar" opens Google Calendar on Android; complete
   calendar file elsewhere.
 - Nov 2026: customer text escaped on both pages.
+- Nov 2026: same-day approval window (16:00–20:00) with approve/decline on
+  the manager page (see "The project").
 - Nov 2026: limits inside the database (08) and matching checks on the page;
   email option removed (owner's decision).
 - Nov 2026: WhatsApp confirmation as a picture (owner's choice over PDF): a

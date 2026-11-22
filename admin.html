@@ -82,6 +82,15 @@
     cursor: pointer;
   }
   .error[hidden] { display: none; }
+  .pending-title { color: #8a5a00; }
+  .pending-card { border-color: #e2c27a; background: #fffaf0; }
+  .pending-card .res-row { flex-wrap: wrap; }
+  .pending-actions { flex-basis: 100%; display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+  .approve-btn {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px;
+    background: #2fae60; color: #fff; border-radius: 10px; font-weight: 600; font-size: 14px; text-decoration: none;
+  }
+  .decline-link { color: var(--danger); font-size: 13px; text-decoration: underline; padding: 10px 4px; }
   .cancel-link {
     color: var(--danger);
     font-size: 13px;
@@ -184,45 +193,60 @@ async function renderShell() {
   renderList();
 }
 
-async function renderList() {
+// Same-day requests made between 16:00 and 20:00 arrive as 'pending' and hold their table.
+// Approving or declining saves the answer and opens WhatsApp to the customer with a
+// ready message (the manager presses send): a page can't send WhatsApp messages itself.
+const BUSINESS_NAME = 'עיזה בר';
+function waNumber(phone) {
+  const d = String(phone).replace(/\D/g, '');
+  return d.startsWith('972') ? d : d.startsWith('0') ? '972' + d.slice(1) : d;
+}
+function waLink(r, approve) {
+  const when = `${formatDisplay(r.reservation_date || currentDate)} בשעה ${r.arrival_time.slice(0, 5)}`;
+  const text = approve
+    ? `שלום ${r.customer_name}, ההזמנה שלך ל${BUSINESS_NAME} אושרה ✳\n${when}, שולחן ל-${r.guests}.\nנחכה עד 15 דקות משעת ההזמנה. מחכים לך!`
+    : `שלום ${r.customer_name}, תודה שפנית ל${BUSINESS_NAME}. מצטערים, לא נוכל לאשר את ההזמנה ל-${when}. נשמח לראות אותך בפעם אחרת!`;
+  return `https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`;
+}
+async function setStatus(id, status) {
+  const { error } = await db.from('reservations').update({ status }).eq('id', id);
+  if (error) saveError = 'השינוי לא נשמר. בדקו את החיבור ונסו שוב.';
+  renderList();
+}
+let saveError = null;
+
+async function renderList(quiet) {
   const content = document.getElementById('listContent');
-  content.innerHTML = `<p>טוען הזמנות...</p>`;
+  if (!content) return;
+  if (!quiet) content.innerHTML = `<p>טוען הזמנות...</p>`;
 
   const { data: tables, error: tablesError } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
-  const { data: reservations, error: resError } = await db
+  const { data: rows, error: resError } = await db
     .from('reservations')
-    .select('id,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status')
+    .select('id,reservation_date,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status')
     .eq('reservation_date', currentDate)
-    .eq('status', 'confirmed')
+    .in('status', ['confirmed', 'pending'])
     .order('arrival_time');
+  if (!document.getElementById('listContent')) return;   // signed out meanwhile
 
   if (tablesError || resError) {
+    if (quiet) return;                                  // a background refresh keeps what's on screen
     content.innerHTML = `<div class="card"><p class="error">ההזמנות לא נטענו. בדקו את החיבור ונסו שוב.</p><button type="button" id="retryBtn">נסו שוב</button></div>`;
-    document.getElementById('retryBtn').addEventListener('click', renderList);
+    document.getElementById('retryBtn').addEventListener('click', () => renderList());
     return;
   }
 
   const tableById = Object.fromEntries((tables || []).map(t => [t.id, t]));
-  const totalGuests = (reservations || []).reduce((s, r) => s + r.guests, 0);
+  const withTable = r => { const t = tableById[r.assigned_table_id]; return { ...r, area: t ? t.area : 'bar', tableName: t ? t.name : 'בר' }; };
+  const pending = (rows || []).filter(r => r.status === 'pending').map(withTable);
+  const reservations = (rows || []).filter(r => r.status === 'confirmed').map(withTable);
+  const totalGuests = reservations.reduce((s, r) => s + r.guests, 0);
 
   const areaLabels = { high: 'שולחנות גבוהים', low: 'שולחנות נמוכים', bar: 'בר' };
   const groups = {};
-  (reservations || []).forEach(r => {
-    const t = tableById[r.assigned_table_id];
-    const area = t ? t.area : 'bar';
-    if (!groups[area]) groups[area] = [];
-    groups[area].push({ ...r, tableName: t ? t.name : 'בר' });
-  });
+  reservations.forEach(r => { (groups[r.area] = groups[r.area] || []).push(r); });
 
-  let html = `
-    <h1>הזמנות ל-${formatDisplay(currentDate)}</h1>
-    <div class="summary">${(reservations || []).length} הזמנות · ${totalGuests} סועדים</div>
-  `;
-
-  for (const area of ['high', 'low', 'bar']) {
-    if (!groups[area]) continue;
-    html += `<div class="group-title">${areaLabels[area]}</div><div class="card">`;
-    html += groups[area].map(r => `
+  const rowHtml = (r, actions) => `
       <div class="res-row">
         <span class="res-time">${r.arrival_time.slice(0,5)}</span>
         <span class="res-name">
@@ -230,26 +254,59 @@ async function renderList() {
           ${r.note ? `<div class="res-note">${esc(r.note)}</div>` : ''}
         </span>
         <span class="res-guests">${r.guests} · ${esc(r.phone)}</span>
-        <span class="cancel-link" data-id="${r.id}">בטל</span>
-      </div>
-    `).join('');
+        ${actions}
+      </div>`;
+
+  let html = `
+    <h1>הזמנות ל-${formatDisplay(currentDate)}</h1>
+    <div class="summary">${reservations.length} הזמנות · ${totalGuests} סועדים${pending.length ? ` · ${pending.length} ממתינות לאישור` : ''}</div>
+    ${saveError ? `<p class="error">${saveError}</p>` : ''}
+  `;
+  saveError = null;
+
+  if (pending.length) {
+    html += `<div class="group-title pending-title">ממתינות לאישור</div><div class="card pending-card">`;
+    html += pending.map(r => rowHtml(r, `
+        <span class="pending-actions">
+          <a class="approve-btn" data-id="${r.id}" href="${waLink(r, true)}" target="_blank" rel="noopener">אישור</a>
+          <a class="decline-link" data-id="${r.id}" href="${waLink(r, false)}" target="_blank" rel="noopener">דחייה</a>
+        </span>`)).join('');
     html += `</div>`;
   }
 
-  if (!(reservations || []).length) {
+  for (const area of ['high', 'low', 'bar']) {
+    if (!groups[area]) continue;
+    html += `<div class="group-title">${areaLabels[area]}</div><div class="card">`;
+    html += groups[area].map(r => rowHtml(r, `<span class="cancel-link" data-id="${r.id}">בטל</span>`)).join('');
+    html += `</div>`;
+  }
+
+  if (!reservations.length && !pending.length) {
     html += `<div class="card"><p style="color:var(--muted); text-align:center;">אין הזמנות בתאריך הזה.</p></div>`;
   }
 
   content.innerHTML = html;
-  document.querySelectorAll('.cancel-link').forEach(el => {
-    el.addEventListener('click', async () => {
+  content.querySelectorAll('.cancel-link').forEach(el => {
+    el.addEventListener('click', () => {
       if (!confirm('לבטל את ההזמנה הזו?')) return;
-      const id = el.getAttribute('data-id');
-      await db.from('reservations').update({ status: 'cancelled' }).eq('id', id);
-      renderList();
+      setStatus(el.getAttribute('data-id'), 'cancelled');
+    });
+  });
+  // the link opens WhatsApp; the answer is saved at the same time
+  content.querySelectorAll('.approve-btn').forEach(el => {
+    el.addEventListener('click', () => setStatus(el.getAttribute('data-id'), 'confirmed'));
+  });
+  content.querySelectorAll('.decline-link').forEach(el => {
+    el.addEventListener('click', e => {
+      if (!confirm('לדחות את הבקשה? השולחן ישתחרר.')) { e.preventDefault(); return; }
+      setStatus(el.getAttribute('data-id'), 'declined');
     });
   });
 }
+
+// new requests arrive while the page is open: refresh quietly every minute
+setInterval(() => { if (document.visibilityState === 'visible') renderList(true); }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderList(true); });
 
 start();
 </script>

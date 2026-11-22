@@ -6,7 +6,9 @@
 --   "DB CHECKS: k OF n FAILED: ..."     the list of failed checks
 -- Run it through the Supabase connector (execute_sql) or in the SQL Editor.
 -- It uses only SELECT, INSERT and function calls (no UPDATE/DELETE), so the
--- connector runs it without a confirmation prompt. The manager's cancel
+-- connector runs it without a confirmation prompt.
+-- The time-of-day rules (16:00 / 20:00 / 30 minutes ahead) depend on the clock and
+-- are checked by the behaviour tests and by dry runs, not here. The manager's cancel
 -- (an UPDATE) is checked by reading its permission and rule instead.
 do $checks$
 declare
@@ -56,8 +58,22 @@ begin
       then failed:=failed||(r.proname||': no fixed search_path'); end if;
   end loop;
   total:=total+1;
-  if exists(select 1 from public.settings where key not in ('arrival_start','arrival_end','booking_cutoff'))
-    then failed:=failed||'unexpected settings rows'::text; end if;
+  if exists(select 1 from public.settings where key not in ('arrival_start','arrival_end','booking_cutoff','approval_from'))
+     or (select value from public.settings where key='booking_cutoff')<>'20:00'
+     or (select value from public.settings where key='approval_from')<>'16:00'
+    then failed:=failed||'settings: expected cutoff 20:00 and approval from 16:00'::text; end if;
+  -- same-day approval window (09_approval_window.sql): statuses, the manager's answers, held tables
+  total:=total+1;
+  if not exists(select 1 from pg_constraint where conname='reservations_status_check')
+     or not exists(select 1 from pg_policies where schemaname='public' and tablename='reservations' and cmd='UPDATE'
+                   and with_check like '%declined%' and with_check like '%confirmed%')
+    then failed:=failed||'approve/decline: status rule or manager update rule missing'::text; end if;
+  total:=total+1;
+  n := public.available_spots(d);
+  insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status)
+    select d,'19:00','בדיקה ממתינה','050-0000000',2,id,'table','pending' from public.venue_tables
+    where kind='table' and active and not exists(select 1 from public.reservations r where r.assigned_table_id=venue_tables.id and r.reservation_date=d and r.status in ('confirmed','pending')) limit 1;
+  if public.available_spots(d)<>n-1 then failed:=failed||'a pending request does not hold its table'::text; end if;
 
   -- ---------- as the public (anyone with the page's key) ----------
   perform set_config('role','anon',true);

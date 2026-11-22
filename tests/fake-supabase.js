@@ -3,7 +3,7 @@
 // Options are read from window.__cfg:
 //   spots (number returned by available_spots, default 10),
 //   available (result of check_availability, default true),
-//   bookResult ('confirmed' by default; 'full', 'closed', 'invalid_time'),
+//   bookResult ('confirmed' by default; 'pending', 'full', 'closed', 'invalid', 'invalid_time'),
 //   rpcError (name of an RPC that should fail), reservations (rows for the manager page),
 //   noSession (manager not logged in), loginError ('wrong' or 'network'), failTables[] (reads that fail).
 // NOTE: this fake has no access rules, so it cannot catch a database rule that
@@ -11,7 +11,7 @@
 (function(){
   const cfg=window.__cfg||{};
   const db={
-    settings:[{key:'arrival_start',value:'17:00'},{key:'arrival_end',value:'21:00'},{key:'booking_cutoff',value:'17:00'}],
+    settings:[{key:'arrival_start',value:'17:00'},{key:'arrival_end',value:'21:00'},{key:'booking_cutoff',value:'20:00'}],
     venue_tables:[
       {id:1,name:'שולחן 1',area:'high',kind:'table',sort_order:1},
       {id:4,name:'שולחן 4',area:'low',kind:'table',sort_order:5},
@@ -56,7 +56,7 @@
       if(cfg.rpcError===name)return {data:null,error:{message:'failed'}};
       if(name==='available_spots')return {data:cfg.spots??10,error:null};
       if(name==='check_availability')return {data:cfg.available??true,error:null};
-      if(name==='book_reservation')return {data:[{result:cfg.bookResult||'confirmed',reservation_id:(cfg.bookResult||'confirmed')==='confirmed'?101:null}],error:null};
+      if(name==='book_reservation')return {data:[{result:cfg.bookResult||'confirmed',reservation_id:['confirmed','pending'].includes(cfg.bookResult||'confirmed')?101:null}],error:null};
       return {data:null,error:{message:'unknown function '+name}};
     },
     functions:{invoke:async(n,o)=>{window.__ops.push({fn:n,body:o.body});return {data:{},error:null}}}
