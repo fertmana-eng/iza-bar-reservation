@@ -2,7 +2,7 @@
 
 ## שלב 1: Supabase
 1. צרו פרויקט חדש ב-supabase.com (חינמי)
-2. היכנסו ל-SQL Editor והריצו לפי הסדר: `sql/01_schema.sql` → `sql/02_booking_function.sql` → `sql/03_admin_policies.sql` → `sql/04_add_email.sql`
+2. היכנסו ל-SQL Editor והריצו לפי הסדר: `supabase/migrations/01_schema.sql` → `02_booking_function.sql` → `03_admin_policies.sql` → `04_add_email.sql`
 3. ב-Settings → API, העתיקו את ה-Project URL וה-anon public key
 
 ## שלב 1.5: אימייל אישור (אופציונלי)
@@ -13,7 +13,7 @@
    ```
    supabase secrets set RESEND_API_KEY=re_xxxxx BUSINESS_NAME="השם שלכם"
    ```
-5. פריסת הפונקציה: `supabase functions deploy send-confirmation`
+5. פריסת הפונקציה: `supabase functions deploy send-confirmation` (הקוד נמצא ב-`supabase/functions/send-confirmation/index.ts`)
 
 אם מדלגים על השלב הזה - הכל ימשיך לעבוד רגיל, פשוט לא יישלח מייל (שדה האימייל בטופס הוא לא חובה בכל מקרה, וגם וואטסאפ+יומן ימשיכו לעבוד).
 
@@ -41,4 +41,4 @@ const SUPABASE_ANON_KEY = "...";  // מה-Settings → API
 ## דברים שכדאי לבדוק/להתאים
 - שינוי מספרי/גדלי השולחנות: טבלת `venue_tables` ב-Supabase (עריכה ישירה מה-Table Editor, בלי צורך בקוד)
 - שינוי שעות/שעת סגירה: טבלת `settings`
-- **חשוב**: מסך הניהול (admin.html) כרגע פתוח לגמרי בלי התחברות, לנוחות העבודה על המערכת. לפני שיש לקוחות אמיתיים (המסך חושף שמות+טלפונים), יש הוראות להחזרת הגנה בתחתית `sql/03_admin_policies.sql`
+- **חשוב**: מסך הניהול (admin.html) כרגע פתוח לגמרי בלי התחברות, לנוחות העבודה על המערכת. לפני שיש לקוחות אמיתיים (המסך חושף שמות+טלפונים), יש הוראות להחזרת הגנה בתחתית `supabase/migrations/03_admin_policies.sql`
