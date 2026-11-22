@@ -14,10 +14,16 @@
   const cfg=window.__cfg||{};
   const db={
     settings:[{key:'arrival_start',value:'17:00'},{key:'arrival_end',value:'21:00'},{key:'booking_cutoff',value:'20:00'}],
+    // the bar's real tables (ids here = table numbers; the bar is 8)
     venue_tables:[
-      {id:1,name:'שולחן 1',area:'high',kind:'table',sort_order:1},
-      {id:4,name:'שולחן 4',area:'low',kind:'table',sort_order:5},
-      {id:8,name:'בר',area:'bar',kind:'bar_pool',sort_order:8}],
+      {id:1,name:'שולחן 1',area:'high',kind:'table',min_guests:1,max_guests:2,sort_order:1},
+      {id:2,name:'שולחן 2',area:'high',kind:'table',min_guests:1,max_guests:2,sort_order:2},
+      {id:3,name:'שולחן 3',area:'high',kind:'table',min_guests:2,max_guests:5,sort_order:3},
+      {id:18,name:'שולחן 18',area:'high',kind:'table',min_guests:4,max_guests:6,sort_order:4},
+      {id:4,name:'שולחן 4',area:'low',kind:'table',min_guests:3,max_guests:6,sort_order:5},
+      {id:6,name:'שולחן 6',area:'low',kind:'table',min_guests:3,max_guests:5,sort_order:6},
+      {id:7,name:'שולחן 7',area:'low',kind:'table',min_guests:5,max_guests:10,sort_order:7},
+      {id:8,name:'בר',area:'bar',kind:'bar_pool',min_guests:1,max_guests:4,pool_capacity:12,sort_order:8}],
     reservations:cfg.reservations||[],
     bookings:cfg.bookings||[]
   };
@@ -72,6 +78,22 @@
           Object.assign(bk,{reservation_date:args.p_date,arrival_time:args.p_time+':00',guests:args.p_guests,status:res});}
         return {data:res,error:null};}
       if(name==='save_push_subscription'){if(!bk)return {data:'not_found',error:null};(db.push=db.push||[]).push(args);return {data:'saved',error:null};}
+      // the manager's floor actions (13_manager_floor.sql)
+      const live=r=>['confirmed','pending'].includes(r.status);
+      const tableTaken=(t,date,except)=>db.reservations.some(r=>live(r)&&r.assigned_table_id===t&&r.reservation_date===date&&r.id!==except);
+      if(name==='set_arrived'){const r=db.reservations.find(x=>x.id===args.p_id);if(!r)return {data:'not_found',error:null};
+        r.arrived_at=args.p_arrived?new Date().toISOString():null;return {data:'saved',error:null};}
+      if(name==='move_booking'){const r=db.reservations.find(x=>x.id===args.p_id),t=db.venue_tables.find(x=>x.id===args.p_table);
+        if(!r||!t)return {data:'not_found',error:null};if(t.id===r.assigned_table_id)return {data:'unchanged',error:null};
+        if(t.kind==='table'&&tableTaken(t.id,r.reservation_date,r.id))return {data:'taken',error:null};
+        Object.assign(r,{assigned_table_id:t.id,assigned_kind:t.kind});
+        return {data:r.guests>=t.min_guests&&r.guests<=t.max_guests?'moved':'moved_size',error:null};}
+      if(name==='manager_add_booking'){const t=args.p_table;
+        if(t&&db.venue_tables.find(x=>x.id===t).kind==='table'&&tableTaken(t,args.p_date,null))return {data:[{result:'taken'}],error:null};
+        const id=900+db.reservations.length;
+        db.reservations.push({id,reservation_date:args.p_date,arrival_time:args.p_time+':00',customer_name:(args.p_name||'').trim()||'ללא שם',
+          phone:args.p_phone||'',guests:args.p_guests,note:args.p_note||null,assigned_table_id:t||3,assigned_kind:'table',status:'confirmed'});
+        return {data:[{result:'confirmed',reservation_id:id,booking_token:'t'+id}],error:null};}
       if(name==='decide_request'){const r=db.reservations.find(x=>x.id===args.p_id);if(!r)return {data:'not_found',error:null};
         if(args.p_approve){Object.assign(r,{status:'confirmed',prev:null});return {data:'confirmed',error:null};}
         if(r.prev){Object.assign(r,{...r.prev,status:'confirmed',prev:null});return {data:'reverted',error:null};}

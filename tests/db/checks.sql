@@ -77,6 +77,13 @@ begin
      or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='available_spots' and prosrc like '%table_taken%')
      or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='get_booking' and 'prev_date'=any(proargnames))
     then failed:=failed||'11b not applied: booking functions do not use the shared helpers'::text; end if;
+  -- the manager's floor actions (13_manager_floor.sql): logged-in manager only
+  total:=total+1;
+  if has_function_privilege('anon','public.move_booking(bigint,integer)','EXECUTE')
+     or has_function_privilege('anon','public.set_arrived(bigint,boolean)','EXECUTE')
+     or has_function_privilege('anon','public.manager_add_booking(date,time,text,text,integer,text,integer)','EXECUTE')
+     or not has_function_privilege('authenticated','public.manager_add_booking(date,time,text,text,integer,text,integer)','EXECUTE')
+    then failed:=failed||'floor actions: only the logged-in manager may call them'::text; end if;
   total:=total+1;
   if has_function_privilege('anon','public.decide_request(bigint,boolean)','EXECUTE')
      or not has_function_privilege('authenticated','public.decide_request(bigint,boolean)','EXECUTE')

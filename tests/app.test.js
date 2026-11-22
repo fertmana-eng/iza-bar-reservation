@@ -283,9 +283,9 @@ describe('manager login',()=>{
   test('logging in with the username opens the bookings',async()=>{
     const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{noSession:true}});
     await page.fill('#userInput',' IzaBar ');await page.fill('#passInput','secret');
-    await page.click('#loginBtn');await page.waitForSelector('#listContent .summary');
+    await page.click('#loginBtn');await page.waitForSelector('#summary');
     assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.auth)),[{auth:'signIn',email:'izabar@izabar.local'}]);
-    assert.match(await text(page,'#listContent'),/הזמנות ל-22\.11\.2026/);
+    assert.equal(await text(page,'#dayTitle'),'יום ראשון · 22.11.2026');
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('a wrong password or no connection shows a clear message',async()=>{
@@ -311,67 +311,162 @@ describe('manager login',()=>{
   });
 });
 
-describe('manager page',()=>{
+describe('manager page (floor plan and evening sheet)',()=>{
   const reservations=[
     {id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_name:'רון',phone:'052-1111111',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'confirmed'},
     {id:2,reservation_date:'2026-11-22',arrival_time:'18:00:00',customer_name:'מאיה',phone:'054-2222222',guests:3,note:'כיסא תינוק',assigned_table_id:8,assigned_kind:'bar_pool',status:'confirmed'}];
-  test('lists the day\'s bookings by area with totals',async()=>{
-    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations}});
-    const t=await text(page,'#listContent');
-    assert.match(t,/הזמנות ל-22\.11\.2026/);assert.match(t,/2 הזמנות · 5 סועדים/);
-    assert.match(t,/שולחנות גבוהים.*רון · שולחן 1.*בר.*מאיה · בר.*כיסא תינוק/);
+  const openAdmin=(rows=reservations,opts={})=>open({file:'admin.html',time:MORNING,cfg:{reservations:rows.map(r=>({...r}))},...opts});
+  const sheetRows=page=>page.evaluate(()=>[...document.querySelectorAll('#sheet tbody tr')].map(tr=>tr.innerText.replace(/\s+/g,' ').trim()));
+  const planStates=page=>page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#plan .tbl')].map(g=>[g.querySelector('.num').textContent,g.classList[1]])));
+  const openRow=(page,id)=>page.click(`#sheet tr[data-id="${id}"]`);
+
+  test('the evening sheet: one row per table like the paper, then the bar, with totals',async()=>{
+    const {page,ctx,errors}=await openAdmin();
+    assert.equal(await text(page,'#dayTitle'),'יום ראשון · 22.11.2026');
+    assert.equal(await text(page,'#summary'),'2 הזמנות · 5 סועדים');
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#sheet th')].map(th=>th.textContent)),['שולחן','שם','שעה','סועדים','הערות']);
+    assert.deepEqual(await sheetRows(page),['1 רון 19:00 2','2','3','4','6','7','18','בר מאיה 18:00 3 כיסא תינוק','בר + הוספה לבר']);
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  test('just after midnight, the manager page opens on the new day (Israel time)',async()=>{
-    const {page,ctx}=await open({file:'admin.html',time:'2026-11-23T00:30:00+02:00'});
-    assert.match(await text(page,'#listContent'),/הזמנות ל-23\.11\.2026/);
-    assert.equal(await page.inputValue('#dateInput'),'2026-11-23');await ctx.close();
+  test('the floor plan colours each table by its state and counts the bar',async()=>{
+    const rows=[...reservations,{id:3,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'דן',phone:'050-3',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending'},
+      {id:4,reservation_date:'2026-11-22',arrival_time:'17:00:00',customer_name:'גל',phone:'050-4',guests:6,note:null,assigned_table_id:7,assigned_kind:'table',status:'confirmed',arrived_at:'2026-11-22T15:00:00Z'}];
+    const {page,ctx}=await openAdmin(rows);
+    assert.deepEqual(await planStates(page),{3:'free',1:'booked',2:'free',18:'free',4:'pending',6:'free',7:'arrived'});
+    assert.equal(await page.textContent('#barCount'),'3/12');
+    assert.equal(await text(page,'#summary'),'3 הזמנות · 11 סועדים · 1 ממתינות לאישור · 1 הגיעו');await ctx.close();
   });
-  test('cancelling asks first and then marks the booking cancelled',async()=>{
-    const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations}});
-    await page.click('.cancel-link[data-id="1"]');await page.waitForTimeout(200);
-    assert.deepEqual(dialogs,['לבטל את ההזמנה הזו?']);
-    assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),'cancelled');
+  test('the day can be changed with the arrows; just after midnight it opens on the new day',async()=>{
+    const {page,ctx}=await openAdmin();
+    await page.click('#nextDay');await page.waitForTimeout(200);
+    assert.equal(await page.inputValue('#dateInput'),'2026-11-23');assert.equal(await text(page,'#dayTitle'),'יום שני · 23.11.2026');
+    assert.equal(await text(page,'#summary'),'0 הזמנות · 0 סועדים');
+    await page.click('#prevDay');await page.click('#prevDay');await page.waitForTimeout(200);
+    assert.equal(await page.inputValue('#dateInput'),'2026-11-21');await ctx.close();
+    const late=await open({file:'admin.html',time:'2026-11-23T00:30:00+02:00'});
+    assert.equal(await late.page.inputValue('#dateInput'),'2026-11-23');await late.ctx.close();
+  });
+  test('tapping a booked table opens its details; "arrived" is marked on the sheet and the plan',async()=>{
+    const {page,ctx}=await openAdmin();
+    await page.click('#plan .tbl[data-table="1"]');await page.waitForSelector('#panel');
+    assert.match(await text(page,'#panel'),/שולחן 1 · רון מוזמן שעה 19:00 סועדים 2 טלפון 052-1111111 הערה —/);
+    assert.equal(await page.getAttribute('#waBtn','href'),'https://wa.me/972521111111');
+    await page.click('#arrivedBtn');await page.waitForFunction(()=>!document.getElementById('overlay'));
+    await page.waitForFunction(()=>document.querySelector('#plan .tbl[data-table="1"]').classList.contains('arrived'),null,{timeout:10000});
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='set_arrived').map(o=>o.args)),[{p_id:1,p_arrived:true}]);
+    assert.match((await sheetRows(page))[0],/רון הגיעו ✓/);await ctx.close();
+  });
+  test('moving a booking: choose "move", then tap a free table',async()=>{
+    const {page,ctx}=await openAdmin();
+    await openRow(page,1);await page.click('#moveBtn');
+    await page.waitForSelector('#moveBanner');
+    assert.match(await text(page,'#moveBanner'),/בחרו שולחן חדש עבור רון \(2 סועדים\)/);
+    assert.equal(await page.evaluate(()=>document.querySelector('#plan .tbl[data-table="2"]').classList.contains('target')),true);
+    await page.click('#plan .tbl[data-table="2"]');await page.waitForSelector('#toast');
+    assert.equal(await text(page,'#toast'),'ההזמנה הועברה.');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='move_booking').map(o=>o.args)),[{p_id:1,p_table:2}]);
+    await page.waitForFunction(()=>!document.getElementById('moveBanner'));
+    assert.deepEqual((await sheetRows(page)).slice(0,2),['1','2 רון 19:00 2']);await ctx.close();
+  });
+  test('moving onto a taken table is refused; a different-size table is allowed with a warning',async()=>{
+    const rows=[...reservations,{id:3,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'דן',phone:'050-3',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'confirmed'}];
+    const {page,ctx}=await openAdmin(rows);
+    await openRow(page,1);await page.click('#moveBtn');await page.waitForSelector('#moveBanner');
+    await page.click('#sheet tr[data-table="4"]');await page.waitForSelector('#toast');
+    assert.equal(await text(page,'#toast'),'השולחן הזה תפוס.');
+    await openRow(page,1);await page.click('#moveBtn');await page.waitForSelector('#moveBanner');
+    await page.click('#plan .tbl[data-table="7"]');
+    await page.waitForFunction(()=>/בגודל אחר/.test(document.getElementById('toast')?.textContent||''),null,{timeout:10000});
+    await page.click('#moveCancel').catch(()=>{});await ctx.close();
+  });
+  test('tapping a free table adds a booking there (phone, WhatsApp or walk-in)',async()=>{
+    const {page,ctx}=await openAdmin();
+    await page.click('#plan .tbl[data-table="3"]');await page.waitForSelector('#addForm');
+    assert.equal(await page.inputValue('#addTable'),'3');
+    await page.fill('#addName','משה');await page.fill('#addPhone','050-9999999');
+    await page.selectOption('#addTime','20:15');await page.selectOption('#addGuests','4');await page.fill('#addNote','טלפון');
+    await page.click('#addSave');await page.waitForSelector('#toast');
+    assert.equal(await text(page,'#toast'),'ההזמנה נשמרה.');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='manager_add_booking').map(o=>o.args)),
+      [{p_date:'2026-11-22',p_time:'20:15',p_name:'משה',p_phone:'050-9999999',p_guests:4,p_note:'טלפון',p_table:3}]);
+    await page.waitForFunction(()=>/משה/.test(document.getElementById('sheet').innerText));
+    assert.equal((await sheetRows(page))[2],'3 משה 20:15 4 טלפון');await ctx.close();
+  });
+  test('"+ הזמנה חדשה" places automatically; a taken table and a bad phone are explained',async()=>{
+    const {page,ctx}=await openAdmin();
+    await page.click('#addBtn');await page.waitForSelector('#addForm');
+    assert.equal(await page.inputValue('#addTable'),'');
+    await page.fill('#addPhone','abc');await page.click('#addSave');
+    assert.match(await text(page,'#addError'),/מספר הטלפון לא תקין/);
+    await page.fill('#addPhone','');await page.selectOption('#addTable','1');await page.click('#addSave');
+    await page.waitForFunction(()=>!document.getElementById('addError').hidden&&/תפוס/.test(document.getElementById('addError').textContent));
+    await page.selectOption('#addTable','');await page.click('#addSave');await page.waitForSelector('#toast');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='manager_add_booking').map(o=>[o.args.p_table,o.args.p_name])),[[1,''],[null,'']]);
     await ctx.close();
+  });
+  test('the bar shows its bookings and can take another',async()=>{
+    const {page,ctx}=await openAdmin();
+    await page.click('#plan .bar-hit');await page.waitForSelector('#panel');
+    assert.match(await text(page,'#panel'),/בר 3 מתוך 12 מקומות תפוסים 18:00 מאיה 3 סועדים/);
+    await page.click('#barAdd');await page.waitForSelector('#addForm');
+    assert.equal(await page.inputValue('#addTable'),'8');await ctx.close();
+  });
+  test('cancelling a booking asks first; no keeps it, yes cancels it',async()=>{
+    for(const [dismiss,expected] of [[true,'confirmed'],[false,'cancelled']]){
+      const {page,ctx,dialogs}=await openAdmin(reservations,{dismissDialogs:dismiss});
+      await openRow(page,1);await page.click('#cancelBtn');await page.waitForTimeout(300);
+      assert.deepEqual(dialogs,['לבטל את ההזמנה הזו?']);
+      assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),expected);await ctx.close();
+    }
   });
   test('a booking whose name or note contains code is shown as plain text, never run',async()=>{
     const evil=[{id:9,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'<img src=x onerror="window.__pwned=1">',
       phone:'<b>050</b>',guests:2,note:'<script>window.__pwned=2</script>',assigned_table_id:1,assigned_kind:'table',status:'confirmed'}];
-    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations:evil}});
-    const t=await text(page,'#listContent');
-    assert.ok(t.includes('<img src=x onerror="window.__pwned=1">')&&t.includes('<script>window.__pwned=2</script>')&&t.includes('<b>050</b>'));
-    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('#listContent img,#listContent script,#listContent b').length].join()),',0');
+    const {page,ctx,errors}=await openAdmin(evil);
+    const t=await text(page,'#sheet');
+    assert.ok(t.includes('<img src=x onerror="window.__pwned=1">')&&t.includes('<script>window.__pwned=2</script>'));
+    await openRow(page,9);
+    assert.ok((await text(page,'#panel')).includes('<b>050</b>'));
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('#listContent img,#listContent script,#panel b').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
   const pendingRow={id:5,reservation_date:'2026-11-22',arrival_time:'19:30:00',customer_name:'נועה',phone:'052-3333333',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending',access_token:'aaaaaaaa-2222-4333-8444-555555555555'};
   test('requests waiting for approval are listed first, with approve and decline',async()=>{
-    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[...reservations,pendingRow]}});
-    const t=await text(page,'#listContent');
-    assert.match(t,/2 הזמנות · 5 סועדים · 1 ממתינות לאישור/);
-    assert.match(t,/ממתינות לאישור 19:30 נועה · שולחן 4 4 · 052-3333333 אישור דחייה/);
-    const href=await page.getAttribute('.approve-btn','href');
+    const {page,ctx,errors}=await openAdmin([...reservations,pendingRow]);
+    assert.equal(await text(page,'#summary'),'2 הזמנות · 5 סועדים · 1 ממתינות לאישור');
+    assert.match(await text(page,'.pending-card'),/19:30 נועה · שולחן 4 4 · 052-3333333 אישור דחייה/);
+    assert.match((await sheetRows(page))[3],/^4 נועה ממתין 19:30 4$/);
+    const href=await page.getAttribute('.pending-card .approve-btn','href');
     assert.ok(href.startsWith('https://wa.me/972523333333?text='));
     assert.match(decodeURIComponent(href),/שלום נועה, ההזמנה שלך לעיזה בר אושרה ✳\n22\.11\.2026 בשעה 19:30, שולחן ל-4\.\nנחכה עד 15 דקות משעת ההזמנה\. מחכים לך!\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#aaaaaaaa-2222-4333-8444-555555555555$/);
-    assert.match(decodeURIComponent(await page.getAttribute('.decline-link','href')),/מצטערים, לא נוכל לאשר את ההזמנה ל-22\.11\.2026 בשעה 19:30/);
+    assert.match(decodeURIComponent(await page.getAttribute('.pending-card .decline-link','href')),/מצטערים, לא נוכל לאשר את ההזמנה ל-22\.11\.2026 בשעה 19:30/);
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('approving opens WhatsApp and moves the request to the confirmed list',async()=>{
-    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]}});
-    const [wa]=await Promise.all([ctx.waitForEvent('page'),page.click('.approve-btn')]);   // WhatsApp opens (the address is checked above; the internet is off in tests)
+    const {page,ctx}=await openAdmin([pendingRow]);
+    const [wa]=await Promise.all([ctx.waitForEvent('page'),page.click('.pending-card .approve-btn')]);   // WhatsApp opens (the address is checked above; the internet is off in tests)
     assert.ok(wa);
     await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
-    await page.waitForFunction(()=>/1 הזמנות/.test(document.getElementById('listContent').innerText),null,{timeout:10000});
+    await page.waitForFunction(()=>/^1 הזמנות/.test(document.getElementById('summary')?.textContent||''),null,{timeout:10000});
     assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.fn).map(o=>[o.fn,o.body])),[['notify-booking',{id:5,result:'confirmed'}]]);
-    assert.match(await text(page,'#listContent'),/1 הזמנות · 4 סועדים/);
+    assert.equal(await text(page,'#summary'),'1 הזמנות · 4 סועדים');
     assert.equal(await page.isVisible('.pending-card'),false);await ctx.close();
+  });
+  test('a request can also be approved from its table on the plan',async()=>{
+    const {page,ctx}=await openAdmin([pendingRow]);
+    await page.click('#plan .tbl[data-table="4"]');await page.waitForSelector('#panel');
+    assert.match(await text(page,'#panel'),/שולחן 4 · נועה ממתינה לאישור/);
+    const opened=ctx.waitForEvent('page',{timeout:10000});
+    await page.click('#panel .approve-btn');await opened;
+    await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});await ctx.close();
   });
   test('declining asks first; yes frees the table, no keeps the request',async()=>{
     for(const [dismiss,expected] of [[false,'declined'],[true,'pending']]){
-      const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]},dismissDialogs:dismiss});
+      const {page,ctx,dialogs}=await openAdmin([pendingRow],{dismissDialogs:dismiss});
       const popups=[];ctx.on('page',p=>popups.push(p));
       // wait for the WhatsApp window when declining (slow machines need more than a fixed pause)
       const opened=dismiss?null:ctx.waitForEvent('page',{timeout:10000});
-      await page.click('.decline-link');
+      await page.click('.pending-card .decline-link');
       if(opened)await opened;
       await page.waitForFunction(s=>__db.reservations[0].status===s,expected,{timeout:10000});
       await page.waitForTimeout(300);
@@ -380,19 +475,19 @@ describe('manager page',()=>{
     }
   });
   test('the manager page picks up new requests by itself',async()=>{
-    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations}});
+    const {page,ctx}=await openAdmin();
     assert.equal(await page.isVisible('.pending-card'),false);
     await page.evaluate(r=>{__db.reservations.push(r);document.dispatchEvent(new Event('visibilitychange'));},pendingRow);
     await page.waitForSelector('.pending-card');await ctx.close();
   });
   test('a change waiting for approval shows what changed; declining keeps the original',async()=>{
     const change={...pendingRow,arrival_time:'20:30:00',guests:5,prev:{reservation_date:'2026-11-22',arrival_time:'19:00:00',guests:2,assigned_table_id:1,assigned_kind:'table'}};
-    const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[change]}});
+    const {page,ctx,dialogs}=await openAdmin([change]);
     assert.match(await text(page,'.pending-card'),/שינוי מבוקש: 19:00 · 2 סועדים ← 20:30 · 5 סועדים/);
-    assert.match(decodeURIComponent(await page.getAttribute('.approve-btn','href')),/השינוי בהזמנה שלך לעיזה בר אושר ✳\n22\.11\.2026 בשעה 20:30, שולחן ל-5/);
-    assert.match(decodeURIComponent(await page.getAttribute('.decline-link','href')),/לא נוכל לאשר את השינוי.*ההזמנה המקורית שלך בתוקף: 22\.11\.2026 בשעה 19:00, שולחן ל-2\./);
+    assert.match(decodeURIComponent(await page.getAttribute('.pending-card .approve-btn','href')),/השינוי בהזמנה שלך לעיזה בר אושר ✳\n22\.11\.2026 בשעה 20:30, שולחן ל-5/);
+    assert.match(decodeURIComponent(await page.getAttribute('.pending-card .decline-link','href')),/לא נוכל לאשר את השינוי.*ההזמנה המקורית שלך בתוקף: 22\.11\.2026 בשעה 19:00, שולחן ל-2\./);
     const opened=ctx.waitForEvent('page',{timeout:10000});
-    await page.click('.decline-link');await opened;
+    await page.click('.pending-card .decline-link');await opened;
     assert.deepEqual(dialogs,['לדחות את השינוי? ההזמנה המקורית תישאר בתוקף.']);
     await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
     assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='decide_request').map(o=>o.args)),[{p_id:5,p_approve:false}]);
@@ -403,14 +498,13 @@ describe('manager page',()=>{
   });
   test('customer changes and cancellations are marked',async()=>{
     const rows=[{...reservations[0],changed_at:'2026-11-21T10:00:00Z'},
-      {id:7,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'יוסי',phone:'050-7777777',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'cancelled',cancelled_by:'customer'},
-      {id:8,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'מנהל ביטל',phone:'050-8888888',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'cancelled',cancelled_by:null}];
-    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations:rows}});
-    const t=await text(page,'#listContent');
-    assert.match(t,/1 הזמנות · 2 סועדים/);
-    assert.match(t,/רון · שולחן 1 שונתה ע״י הלקוח/);
-    assert.match(t,/בוטלו ע״י הלקוח 20:00 יוסי · שולחן 1/);
-    assert.doesNotMatch(t,/מנהל ביטל/);await ctx.close();
+      {id:7,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'יוסי',phone:'050-7777777',guests:2,note:null,assigned_table_id:2,assigned_kind:'table',status:'cancelled',cancelled_by:'customer'},
+      {id:8,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'מנהל ביטל',phone:'050-8888888',guests:2,note:null,assigned_table_id:3,assigned_kind:'table',status:'cancelled',cancelled_by:null}];
+    const {page,ctx}=await openAdmin(rows);
+    assert.equal(await text(page,'#summary'),'1 הזמנות · 2 סועדים');
+    assert.equal((await sheetRows(page))[0],'1 רון שונתה ע״י הלקוח 19:00 2');
+    assert.match(await text(page,'.cancelled-card'),/20:00 יוסי · שולחן 2/);
+    assert.doesNotMatch(await text(page,'#listContent'),/מנהל ביטל/);await ctx.close();
   });
   test('Israeli phone numbers become WhatsApp numbers',async()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING});
@@ -418,17 +512,11 @@ describe('manager page',()=>{
     await ctx.close();
   });
   test('if the bookings cannot be loaded, a message and a retry button are shown',async()=>{
-    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations,failTables:['reservations']}});
+    const {page,ctx}=await openAdmin(reservations,{cfg:{reservations,failTables:['reservations']}});
     assert.match(await text(page,'#listContent'),/ההזמנות לא נטענו/);
     await page.evaluate(()=>{__cfg.failTables=[];});
-    await page.click('#retryBtn');await page.waitForTimeout(200);
-    assert.match(await text(page,'#listContent'),/2 הזמנות · 5 סועדים/);await ctx.close();
-  });
-  test('saying no to the cancel question keeps the booking',async()=>{
-    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations},dismissDialogs:true});
-    await page.click('.cancel-link[data-id="1"]');await page.waitForTimeout(200);
-    assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),'confirmed');
-    await ctx.close();
+    await page.click('#retryBtn');await page.waitForSelector('#summary');
+    assert.equal(await text(page,'#summary'),'2 הזמנות · 5 סועדים');await ctx.close();
   });
 });
 
