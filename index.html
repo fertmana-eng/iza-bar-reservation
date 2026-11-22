@@ -225,6 +225,7 @@
     font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px;
     background: transparent; color: var(--ink); border: 1px solid var(--field-border);
   }
+  a.btn-outline { display: flex; align-items: center; justify-content: center; text-decoration: none; }
   .btn-whatsapp {
     width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 700;
     font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 4px;
@@ -695,9 +696,11 @@ async function submitBooking() {
       <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none; display:block;">
         <button type="button" class="btn-whatsapp">שליחה לוואטסאפ שלי</button>
       </a>
-      <button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>
+      ${IS_ANDROID
+        ? `<a class="btn-outline" id="calLink" href="${googleCalendarUrl()}" target="_blank" rel="noopener">הוספה ליומן</a>`
+        : `<button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>`}
     `;
-    document.getElementById('icsBtn').addEventListener('click', downloadIcs);
+    if (!IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
   } else if (result === 'full') {
     stepIndex = 0;
     dateWarning = 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.';
@@ -716,20 +719,49 @@ async function submitBooking() {
   }
 }
 
-function downloadIcs() {
-  const [h, m] = formData.time.split(':');
-  const dt = formData.date.replace(/-/g, '') + 'T' + h + m + '00';
-  const ics = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'BEGIN:VEVENT',
-    `DTSTART:${dt}`,
-    `SUMMARY:הזמנה ל-${BUSINESS_NAME} (${formData.guests} סועדים)`,
-    'DESCRIPTION:אישור הזמנת שולחן',
-    'END:VEVENT',
-    'END:VCALENDAR'
+// "Add to calendar". Android's Chrome can't open a calendar file straight into
+// the calendar (it only downloads it), so Android opens Google Calendar with the
+// booking filled in; iPhone and computers get the file, which they open directly.
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const VISIT_HOURS = 2;
+function visitTimes() {
+  const [h, m] = formData.time.split(':').map(Number);
+  const day = formData.date.replace(/-/g, '');
+  const at = (hh, mm) => `${day}T${pad2(hh)}${pad2(mm)}00`;
+  return { start: at(h, m), end: at(h + VISIT_HOURS, m) };   // arrivals end at 21:00, so this stays on the same day
+}
+function calendarTitle() { return `${BUSINESS_NAME} - שולחן ל-${formData.guests}`; }
+function googleCalendarUrl() {
+  const t = visitTimes();
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: calendarTitle(), dates: `${t.start}/${t.end}`,
+    ctz: 'Asia/Jerusalem', location: BUSINESS_NAME, details: `הזמנה על שם ${formData.name}` });
+  return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+// Israel local date and time 'YYYYMMDDTHHMMSS' -> UTC 'YYYYMMDDTHHMMSSZ' (calendar files need an exact moment)
+function israelToUtc(local) {
+  const n = local.match(/\d+/g).join('');
+  const [y, mo, d, h, mi] = [n.slice(0,4), n.slice(4,6), n.slice(6,8), n.slice(8,10), n.slice(10,12)].map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(guess)).map(x => [x.type, x.value]));
+  const offset = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - guess;
+  return new Date(guess - offset).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+}
+function buildIcs() {
+  const t = visitTimes();
+  const clean = v => String(v).replace(/[\;,]/g, m => '\\' + m).replace(/[\r\n]+/g, ' ');
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Iza Bar//Reservations//HE', 'BEGIN:VEVENT',
+    `UID:${formData.date}-${formData.time.replace(':', '')}-${Date.now()}@izabar`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
+    `DTSTART:${israelToUtc(t.start)}`, `DTEND:${israelToUtc(t.end)}`,
+    `SUMMARY:${clean(calendarTitle())}`, `LOCATION:${clean(BUSINESS_NAME)}`,
+    `DESCRIPTION:${clean('הזמנה על שם ' + formData.name)}`,
+    'END:VEVENT', 'END:VCALENDAR'
   ].join('\r\n');
-  const blob = new Blob([ics], { type: 'text/calendar' });
+}
+function downloadIcs() {
+  const blob = new Blob([buildIcs()], { type: 'text/calendar' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = 'reservation.ics';

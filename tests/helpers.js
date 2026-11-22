@@ -21,11 +21,11 @@ const PHONE={width:390,height:844};
 
 // Open a page (default: the customer booking page). opts: file ('admin.html'),
 // cfg (fake database options), time (fixed clock), timezoneId (the phone's
-// time zone; default Israel).
+// time zone; default Israel), userAgent (e.g. an Android phone's).
 // Every outside request (fonts etc.) is blocked so the tests never touch the internet;
 // the database library is replaced by the fake.
 async function openPage(browser,url,opts={}){
-  const ctx=await browser.newContext({viewport:PHONE,timezoneId:opts.timezoneId||'Asia/Jerusalem',locale:'he-IL'});
+  const ctx=await browser.newContext({viewport:PHONE,timezoneId:opts.timezoneId||'Asia/Jerusalem',locale:'he-IL',acceptDownloads:true,...(opts.userAgent?{userAgent:opts.userAgent}:{})});
   const page=await ctx.newPage();const errors=[],dialogs=[];
   page.on('pageerror',e=>errors.push(String(e)));
   page.on('dialog',d=>{dialogs.push(d.message());opts.dismissDialogs?d.dismiss():d.accept();});

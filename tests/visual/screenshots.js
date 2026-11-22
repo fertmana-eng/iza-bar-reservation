@@ -21,6 +21,7 @@ const STATES=[
  ['details',toDetails],
  ['summary',toSummary],
  ['success',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');}],
+ ['success-android',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');},{},undefined,{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36'}],
  ['admin',async p=>{},{reservations:RES},'admin.html'],
  ['admin-empty',async p=>{},{},'admin.html'],
  ['admin-login',async p=>{},{noSession:true},'admin.html'],
@@ -28,8 +29,8 @@ const STATES=[
 ];
 (async()=>{
   const browser=await chromium.launch(),server=await startServer();
-  for(const [name,go,cfg,file] of STATES){
-    const {page,ctx}=await openPage(browser,server.url,{time:TIME,cfg:cfg||{},file});
+  for(const [name,go,cfg,file,extra] of STATES){
+    const {page,ctx}=await openPage(browser,server.url,{time:TIME,cfg:cfg||{},file,...(extra||{})});
     await go(page);await page.waitForTimeout(200);
     await page.screenshot({path:path.join(OUT,name+'.png'),fullPage:true});await ctx.close();
   }
