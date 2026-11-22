@@ -107,6 +107,12 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const app = document.getElementById('app');
 
+// Customer text is shown inside HTML: turn < > & " ' into harmless characters first,
+// so a name or note can never become code on the page.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // Today in Israel, whatever the phone's time zone (toISOString would give the UTC date).
 function todayStr() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -220,10 +226,10 @@ async function renderList() {
       <div class="res-row">
         <span class="res-time">${r.arrival_time.slice(0,5)}</span>
         <span class="res-name">
-          ${r.customer_name} · ${r.tableName}
-          ${r.note ? `<div class="res-note">${r.note}</div>` : ''}
+          ${esc(r.customer_name)} · ${esc(r.tableName)}
+          ${r.note ? `<div class="res-note">${esc(r.note)}</div>` : ''}
         </span>
-        <span class="res-guests">${r.guests} · ${r.phone}</span>
+        <span class="res-guests">${r.guests} · ${esc(r.phone)}</span>
         <span class="cancel-link" data-id="${r.id}">בטל</span>
       </div>
     `).join('');

@@ -286,6 +286,11 @@ function israelNow() {
   }).formatToParts(new Date()).map(p => [p.type, p.value]));
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
+// Customer text is shown inside HTML: turn < > & " ' into harmless characters first,
+// so a name or note can never become code on the page.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 function todayStr() { return israelNow().date; }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function toDateStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
@@ -331,8 +336,8 @@ function renderProgress() {
     const value = state === 'done' ? stepValueText(s) : null;
     const label = value || STEP_LABELS[s];
     return state === 'done'
-      ? `<button type="button" class="step-chip done" data-step="${i}">${label}</button>`
-      : `<span class="step-chip ${state}">${label}</span>`;
+      ? `<button type="button" class="step-chip done" data-step="${i}">${esc(label)}</button>`
+      : `<span class="step-chip ${state}">${esc(label)}</span>`;
   }).join('<span class="step-sep">›</span>');
 
   progressEl.querySelectorAll('.step-chip.done').forEach(btn => {
@@ -365,7 +370,7 @@ function summaryHtml() {
   const parts = summaryParts();
   if (!parts.length) return '';
   return `<div class="summary-chips">${parts.map((p, idx) =>
-    `<button type="button" class="chip-btn" data-step="${p.step}">${p.text}</button>${idx < parts.length - 1 ? '<span class="chip-sep">·</span>' : ''}`
+    `<button type="button" class="chip-btn" data-step="${p.step}">${esc(p.text)}</button>${idx < parts.length - 1 ? '<span class="chip-sep">·</span>' : ''}`
   ).join('')}</div>`;
 }
 function bindSummaryClicks() {
@@ -536,11 +541,11 @@ function renderDetailsStep() {
     <form id="detailsForm">
       <div class="field">
         <label for="nameInput">שם</label>
-        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" value="${formData.name}" required autofocus>
+        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" value="${esc(formData.name)}" required autofocus>
       </div>
       <div class="field">
         <label for="phoneInput">טלפון</label>
-        <input id="phoneInput" type="tel" placeholder="050-0000000" value="${formData.phone}" required>
+        <input id="phoneInput" type="tel" placeholder="050-0000000" value="${esc(formData.phone)}" required>
       </div>
       <div id="detailsError" class="error" style="display:none;"></div>
       <button type="submit" class="primary">לסיכום ההזמנה</button>
@@ -617,7 +622,7 @@ function fullSummaryHtml() {
     ['טלפון', formData.phone, STEPS.indexOf('details')]
   ];
   return `<div class="summary-box">${rows.map(([label, value, step]) =>
-    `<button type="button" class="summary-row" data-step="${step}"><span class="summary-label">${label}</span><span class="summary-value">${value}</span></button>`
+    `<button type="button" class="summary-row" data-step="${step}"><span class="summary-label">${label}</span><span class="summary-value">${esc(value)}</span></button>`
   ).join('')}</div>`;
 }
 function bindFullSummaryClicks() {
@@ -632,11 +637,11 @@ function renderExtraStep() {
     ${fullSummaryHtml()}
     <div class="field">
       <label for="noteInput">הערה (לא חובה)</label>
-      <textarea id="noteInput" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${formData.note}</textarea>
+      <textarea id="noteInput" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
     </div>
     <div class="field">
       <label for="emailInput">אימייל לאישור (לא חובה)</label>
-      <input id="emailInput" type="email" placeholder="name@example.com" value="${formData.email}">
+      <input id="emailInput" type="email" placeholder="name@example.com" value="${esc(formData.email)}">
     </div>
     <div id="submitError" class="error" style="display:none;"></div>
     <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
@@ -689,7 +694,7 @@ async function submitBooking() {
     stepArea.innerHTML = `
       <div class="success">
         <h2>ההזמנה אושרה</h2>
-        <p>${formData.name}, שולחן ל-${formData.guests} סועדים</p>
+        <p>${esc(formData.name)}, שולחן ל-${formData.guests} סועדים</p>
         <p>${formatDisplay(formData.date)} בשעה ${formData.time}</p>
         <p class="muted">מצפים לראותכם ✳</p>
       </div>

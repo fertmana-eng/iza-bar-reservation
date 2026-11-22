@@ -81,12 +81,16 @@ Same owner as the IzaZoo management app (repository
    phone's time zone; `book_reservation` runs in Israel time
    (`07_israel_time.sql`). This also fixed a worse bug: every calendar day was
    linked to the day before it (tapping 26 booked the 25th).
-4. **Customer text is inserted as HTML** (name, note) on the manager page and
-   in the email: a customer could inject code. Escape it.
-5. **`send-confirmation` can be called by anyone** with any address and text,
-   so it could be used to send emails through the owner's Resend account.
-   Better: send the email from the database side after a real booking, or have
-   the function look up the booking itself.
+4. ~~Customer text inserted as HTML~~: fixed 22 Nov 2026. Everything a
+   customer types goes through `esc()` on both pages and in the email code.
+5. **Confirmation emails are not sent at all**: the `send-confirmation` edge
+   function was never deployed (the project has no edge functions), so the
+   page's call fails silently while the customer sees "booking confirmed".
+   Ask the owner whether they want emails (needs a Resend account and,
+   to send from the bar's own address, a domain). If yes, don't deploy the
+   current version as is: anyone can call it with any address, so it could
+   be used to send emails through the owner's account. Send the email from
+   the booking itself instead (look up the booking; only to its address).
 6. The functions (`book_reservation`, `available_spots`, `check_availability`)
    have no `search_path` set and don't limit text length or guest count.
    (Only the 7-parameter `book_reservation` exists in the real database.)
@@ -100,7 +104,7 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Fix 4–6, one change each. Note: Supabase gives
+1. Fix 6 (function limits); ask the owner about emails (5). Note: Supabase gives
    anon and authenticated full permissions on any NEW table by default; set
    the grants explicitly whenever a table is added (06_manager_login.sql
    did this for the existing three).
@@ -148,7 +152,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (23 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (25 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
@@ -178,6 +182,7 @@ with a fixed clock in Israel time.
   calendar's day numbers now book the right date.
 - Nov 2026: "add to calendar" opens Google Calendar on Android; complete
   calendar file elsewhere.
+- Nov 2026: customer text escaped on both pages and in the email code.
 - Nov 2026 (experiment, not part of this site): a 3D model of the bar from an
   old architect's plan, with tappable seats, as a private claude.ai artifact
   ("עיזה בר – בחירת מקומות", https://claude.ai/artifact/XodKCTKkfWuZLcSuZokYxM;
