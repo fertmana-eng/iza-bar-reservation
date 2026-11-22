@@ -225,6 +225,7 @@
     font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px;
     background: transparent; color: var(--ink); border: 1px solid var(--field-border);
   }
+  a.btn-outline[hidden] { display: none; }
   a.btn-outline, a.btn-whatsapp { display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
   .card-preview { display: block; width: min(320px, 86%); margin: 0 auto; border-radius: 6px; box-shadow: 0 6px 24px rgba(28,22,16,.18); }
   .card-preview[hidden] { display: none; }
@@ -724,6 +725,7 @@ async function submitBooking() {
         </div>
       </div>
       <a class="btn-whatsapp" id="waLink" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">שליחה לוואטסאפ שלי</a>
+      ${token ? `<a class="btn-outline" id="waLinkText" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener" hidden>שליחת הקישור להזמנה לוואטסאפ</a>` : ''}
       ${pending ? '' : IS_ANDROID
         ? `<a class="btn-outline" id="calLink" href="${googleCalendarUrl()}" target="_blank" rel="noopener">הוספה ליומן</a>`
         : `<button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>`}
@@ -788,6 +790,9 @@ async function prepareCard() {
   if (!blob) return;
   const file = new File([blob], 'izabar-booking.png', { type: 'image/png' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) cardFile = file;
+  // WhatsApp sometimes drops the picture's caption, and with it the link (owner's phone, Nov 2026):
+  // where the picture is shared, a second button sends the link as a plain text message
+  if (cardFile) { const t = document.getElementById('waLinkText'); if (t) t.hidden = false; }
   const wa = document.getElementById('waLink');
   if (wa) wa.addEventListener('click', e => {
     if (!cardFile) return;                      // no file sharing here: the link sends the text instead

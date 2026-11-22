@@ -147,6 +147,7 @@ function render() {
       </div>
       <button type="button" class="btn-outline" id="saveNote">שמירת ההערה</button>`
       : b.note ? `<div class="field"><label>הערה להזמנה</label><p class="note-view">${esc(b.note)}</p></div>` : ''}
+    ${active ? `<a class="btn-outline" id="sendLink" href="https://wa.me/?text=${encodeURIComponent(`ההזמנה שלי ל${BUSINESS_NAME} - ${when}\nלצפייה, שינוי או ביטול: ${location.href}`)}" target="_blank" rel="noopener">שליחת הקישור לוואטסאפ שלי</a>` : ''}
     ${b.can_cancel ? `<button type="button" class="btn-danger" id="cancelBtn">ביטול ההזמנה</button>` : ''}
     ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
     ${active && !b.can_change ? `<p class="hint">אפשר לשנות פרטים עד שעה לפני ההגעה. לשינויים כתבו לנו בוואטסאפ.</p>` : ''}
