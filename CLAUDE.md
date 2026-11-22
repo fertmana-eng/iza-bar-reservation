@@ -60,11 +60,12 @@ Same owner as the IzaZoo management app (repository
   (free Pages needs a public repository; it holds no secrets or customer data,
   only the publishable key that is in the page anyway). Address:
   https://fertmana-eng.github.io/iza-bar-reservation/ (manager page:
-  `admin.html`). Until then it is also published by **Netlify** (site
-  `remarkable-twilight-87b52c`) and **Cloudflare** ("Workers Builds:
-  iza-bar-reservation"); once the GitHub address works, the owner switches
-  both off. Cloudflare's check fails on pull-request branches but succeeds on
-  `main` (harmless; goes away when Cloudflare is disconnected).
+  `admin.html`). The old copies: **Cloudflare** deleted by the owner (22 Nov
+  2026). **Netlify** (project `remarkable-twilight-87b52c`, marked "Private",
+  so only the owner's Netlify team can open it) is still connected: its new
+  layout shows no delete button on the phone or in desktop view, so it was
+  left for now. Harmless; delete it some time from a computer (or remove
+  Netlify's access to this repository in GitHub → Settings → Applications).
 - Database changes and the edge function are kept in `supabase/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
@@ -90,15 +91,18 @@ Same owner as the IzaZoo management app (repository
    have no `search_path` set and don't limit text length or guest count.
    (Only the 7-parameter `book_reservation` exists in the real database.)
 7. The `admin_password_hash` setting is unused (left over).
+8. **"הוספה ליומן" on Android** only downloads a `.ics` file (Chrome on
+   Android can't open it straight into the calendar; a platform rule). Plan:
+   on Android open Google Calendar with the booking filled in, keep the file
+   for iPhone. The file also lacks an end time, UID and DTSTAMP.
 
 ## Next steps (in order)
 
-1. Owner checks the login and a test booking on the phone.
-2. Fix 3–6, one change each. Real-database facts (Nov 2026): anon and
-   authenticated have every table permission on all three tables (Supabase's
-   default), so the policies are the only protection.
-3. Once GitHub Pages works, the owner disconnects Netlify and Cloudflare.
-4. Then new features with the owner (use a short planning interview first).
+1. Fix 3–6 and 8, one change each (time zone first). Note: Supabase gives
+   anon and authenticated full permissions on any NEW table by default; set
+   the grants explicitly whenever a table is added (06_manager_login.sql
+   did this for the existing three).
+2. Then new features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
 
