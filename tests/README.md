@@ -34,5 +34,7 @@ node tests/visual/screenshots.js tests/visual/out/after
 node tests/visual/compare.js tests/visual/out/before tests/visual/out/after
 ```
 
+To take only some screenshots: `ONLY='^admin' node tests/visual/screenshots.js ...`.
+
 A styling change is accepted only with zero differences (or differences the
 owner asked for). Differing screenshots get a `diff-*.png` showing what changed.

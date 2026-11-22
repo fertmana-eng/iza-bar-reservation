@@ -81,6 +81,40 @@ describe('customer booking page',()=>{
     assert.match(decodeURIComponent(href),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15/);
     await ctx.close();
   });
+  // Same-day rules by the hour of booking (owner, Nov 2026): before 16:00 confirmed,
+  // 16:00-20:00 waits for approval, from 20:00 closed; arrivals at least 30 minutes ahead.
+  test('the welcome text explains the same-day rules',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    assert.match(await text(page,'#stepArea'),/עד 16:00 ההזמנה מאושרת מיד\. בין 16:00 ל-20:00 נאשר אותה מולכם בוואטסאפ\. אחרי 20:00 כבר לא ניתן להזמין להיום/);
+    await ctx.close();
+  });
+  test('for today, the earliest arrival is 30 minutes from now, rounded up to a quarter hour',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T18:40:00+02:00'});
+    await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-22"]');await page.click('#dateNext');
+    await page.waitForSelector('#guestsNext');await page.click('#guestsNext');await page.waitForSelector('#timeNext');
+    assert.equal(await text(page,'#timeValue'),'19:15');
+    assert.equal(await page.isDisabled('#timeMinus'),true);
+    assert.match(await text(page,'.hint'),/בין 19:15 ל-21:00/);
+    // another day starts at the usual 17:00
+    await page.click('.progress .step-chip.done[data-step="0"]');await page.click('.cal-grid button[data-date="2026-11-23"]');
+    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');await page.waitForSelector('#timeNext');
+    assert.equal(await text(page,'#timeValue'),'19:15','keeps the chosen time');
+    await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');
+    assert.equal(await text(page,'#timeValue'),'17:00');await ctx.close();
+  });
+  test('a request waiting for approval gets its own card, without "add to calendar"',async()=>{
+    const {page,ctx,errors}=await open({time:'2026-11-22T17:00:00+02:00',cfg:{bookResult:'pending'}});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.match(await page.getAttribute('#cardPreview','alt'),/^הבקשה התקבלה וממתינה לאישור: דנה כהן/);
+    assert.equal(await page.isVisible('#icsBtn'),false);assert.equal(await page.isVisible('#calLink'),false);
+    assert.match(decodeURIComponent(await page.getAttribute('#waLink','href')),/בקשת הזמנה \(ממתינה לאישור\) - עיזה בר/);
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('if the chosen time has just passed, the customer is told to pick a later one',async()=>{
+    const {page,ctx}=await open({time:MORNING,cfg:{bookResult:'invalid_time'}});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForTimeout(200);
+    assert.match(await text(page,'#submitError'),/השעה שבחרתם כבר לא זמינה/);await ctx.close();
+  });
   test('there is no email field (owner decided against emails)',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await fillBooking(page);
@@ -168,8 +202,8 @@ describe('customer booking page',()=>{
     assert.match(await text(page,'#stepArea'),/התאריך הזה התמלא בדיוק עכשיו/);
     assert.ok(await page.isVisible('.cal-grid'));await ctx.close();
   });
-  test('after the 17:00 cutoff, today can no longer be booked',async()=>{
-    const {page,ctx}=await open({time:'2026-11-22T18:00:00+02:00'});
+  test('from 20:00, today can no longer be booked',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T20:05:00+02:00'});
     await page.click('#introNext');
     assert.equal(await page.evaluate(()=>document.querySelector('.cal-grid button.today')?.dataset.date),'2026-11-22');
     await page.click('.cal-grid button[data-date="2026-11-22"]');await page.click('#dateNext');await page.waitForTimeout(200);
@@ -193,8 +227,8 @@ describe('customer booking page',()=>{
     });
   }
   test('a phone in another time zone still uses Israel time for today and the cutoff',async()=>{
-    // 18:00 in Israel is 11:00 in New York: today is already closed in Israel
-    const {page,ctx}=await open({time:'2026-11-22T18:00:00+02:00',timezoneId:'America/New_York'});
+    // 20:30 in Israel is 13:30 in New York: today is already closed in Israel
+    const {page,ctx}=await open({time:'2026-11-22T20:30:00+02:00',timezoneId:'America/New_York'});
     await page.click('#introNext');
     assert.deepEqual((await calendarDays(page)).filter(d=>d.today).map(d=>d.date),['2026-11-22']);
     await page.click('.cal-grid button[data-date="2026-11-22"]');await page.click('#dateNext');await page.waitForTimeout(200);
@@ -281,6 +315,48 @@ describe('manager page',()=>{
     assert.ok(t.includes('<img src=x onerror="window.__pwned=1">')&&t.includes('<script>window.__pwned=2</script>')&&t.includes('<b>050</b>'));
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('#listContent img,#listContent script,#listContent b').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
+  });
+  const pendingRow={id:5,reservation_date:'2026-11-22',arrival_time:'19:30:00',customer_name:'נועה',phone:'052-3333333',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending'};
+  test('requests waiting for approval are listed first, with approve and decline',async()=>{
+    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[...reservations,pendingRow]}});
+    const t=await text(page,'#listContent');
+    assert.match(t,/2 הזמנות · 5 סועדים · 1 ממתינות לאישור/);
+    assert.match(t,/ממתינות לאישור 19:30 נועה · שולחן 4 4 · 052-3333333 אישור דחייה/);
+    const href=await page.getAttribute('.approve-btn','href');
+    assert.ok(href.startsWith('https://wa.me/972523333333?text='));
+    assert.match(decodeURIComponent(href),/שלום נועה, ההזמנה שלך לעיזה בר אושרה ✳\n22\.11\.2026 בשעה 19:30, שולחן ל-4/);
+    assert.match(decodeURIComponent(await page.getAttribute('.decline-link','href')),/מצטערים, לא נוכל לאשר את ההזמנה ל-22\.11\.2026 בשעה 19:30/);
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('approving opens WhatsApp and moves the request to the confirmed list',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]}});
+    const [wa]=await Promise.all([ctx.waitForEvent('page'),page.click('.approve-btn')]);   // WhatsApp opens (the address is checked above; the internet is off in tests)
+    assert.ok(wa);
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(()=>__db.reservations[0].status),'confirmed');
+    assert.match(await text(page,'#listContent'),/1 הזמנות · 4 סועדים/);
+    assert.equal(await page.isVisible('.pending-card'),false);await ctx.close();
+  });
+  test('declining asks first; yes frees the table, no keeps the request',async()=>{
+    for(const [dismiss,expected] of [[false,'declined'],[true,'pending']]){
+      const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[{...pendingRow}]},dismissDialogs:dismiss});
+      const popups=[];ctx.on('page',p=>popups.push(p));
+      await page.click('.decline-link');await page.waitForTimeout(400);
+      assert.deepEqual(dialogs,['לדחות את הבקשה? השולחן ישתחרר.']);
+      assert.equal(await page.evaluate(()=>__db.reservations[0].status),expected);
+      assert.equal(popups.length,dismiss?0:1,'WhatsApp opens only when declining');await ctx.close();
+    }
+  });
+  test('the manager page picks up new requests by itself',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations}});
+    assert.equal(await page.isVisible('.pending-card'),false);
+    await page.evaluate(r=>{__db.reservations.push(r);document.dispatchEvent(new Event('visibilitychange'));},pendingRow);
+    await page.waitForSelector('.pending-card');await ctx.close();
+  });
+  test('Israeli phone numbers become WhatsApp numbers',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:MORNING});
+    assert.deepEqual(await page.evaluate(()=>['052-3333333','+972 52-333-3333','(052) 333 3333'].map(waNumber)),['972523333333','972523333333','972523333333']);
+    await ctx.close();
   });
   test('if the bookings cannot be loaded, a message and a retry button are shown',async()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations,failTables:['reservations']}});

@@ -276,7 +276,7 @@ let viewMonth, minDate, maxDate;
 let dateWarning = null;
 let guestsWarning = null;
 
-const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '' };
+const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '', bookingId: null, pending: false };
 
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
@@ -323,7 +323,7 @@ async function getSettings() {
   return {
     start: settings.arrival_start || '17:00',
     end: settings.arrival_end || '21:00',
-    cutoff: settings.booking_cutoff || '17:00'
+    cutoff: settings.booking_cutoff || '20:00'
   };
 }
 
@@ -407,7 +407,7 @@ function renderIntro() {
     <div class="intro-copy">
       <p>הזמנת מקומות אצלנו בפנים בלבד, בין השעות <span dir="ltr" style="white-space:nowrap;">17:00–21:00</span>.</p>
       <p>הישיבה בחוץ היא על בסיס מקום פנוי - אין אופציה להזמין מראש, פשוט מגיעים וממתינים שיתפנה שולחן 🙂</p>
-      <p>הזמנות לתאריך הנוכחי יתקבלו עד השעה 17:00.</p>
+      <p>הזמנות לאותו היום: עד 16:00 ההזמנה מאושרת מיד. בין 16:00 ל-20:00 נאשר אותה מולכם בוואטסאפ. אחרי 20:00 כבר לא ניתן להזמין להיום.</p>
       <p>נוכל לחכות למאחרים עד 15 דקות משעת ההזמנה - לאחר מכן לא נוכל להתחייב שהמקום ישמר לכם, עמכם הסליחה 🙏</p>
       <p>קחו בבקשה בחשבון שבמידה והקדמתם, ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
     </div>
@@ -513,9 +513,16 @@ function minutesToTime(mins) {
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
+// Same-day arrivals start at least 30 minutes from now, rounded up to the next quarter hour.
+function earliestArrival() {
+  const now = israelNow();
+  let min = timeToMinutes(pageSettings.start);
+  if (formData.date === now.date) min = Math.max(min, Math.ceil((timeToMinutes(now.time) + 30) / 15) * 15);
+  return min;
+}
 function renderTimeStep() {
-  if (!formData.time) formData.time = pageSettings.start;
-  const minMin = timeToMinutes(pageSettings.start);
+  const minMin = earliestArrival();
+  if (!formData.time || timeToMinutes(formData.time) < minMin) formData.time = minutesToTime(minMin);
   const maxMin = timeToMinutes(pageSettings.end);
   const curMin = timeToMinutes(formData.time);
 
@@ -526,7 +533,7 @@ function renderTimeStep() {
       <span class="stepper-value" id="timeValue">${formData.time}</span>
       <button type="button" id="timePlus" ${curMin >= maxMin ? 'disabled' : ''}>+</button>
     </div>
-    <p class="hint">בין ${pageSettings.start} ל-${pageSettings.end}</p>
+    <p class="hint">בין ${minutesToTime(minMin)} ל-${pageSettings.end}</p>
     <button type="button" class="primary" id="timeNext">לפרטים האישיים</button>
   `;
   document.getElementById('timeMinus').addEventListener('click', () => {
@@ -681,28 +688,33 @@ async function submitBooking() {
 
   const result = data[0].result;
 
-  if (result === 'confirmed') {
+  if (result === 'confirmed' || result === 'pending') {
+    // 'pending': a same-day request made between 16:00 and 20:00, held until the manager approves it
+    const pending = result === 'pending';
     formData.bookingId = data[0].reservation_id;
+    formData.pending = pending;
+    const title = pending ? 'הבקשה התקבלה' : 'ההזמנה אושרה';
     const waText = encodeURIComponent(
-      `אישור הזמנה - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
+      `${pending ? 'בקשת הזמנה (ממתינה לאישור)' : 'אישור הזמנה'} - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
     );
     progressEl.innerHTML = '';
     stepArea.innerHTML = `
       <div class="success">
         <img class="card-preview" id="cardPreview" hidden
-          alt="ההזמנה אושרה: ${esc(formData.name)}, שולחן ל-${formData.guests} סועדים, ${formatDisplay(formData.date)} בשעה ${formData.time}">
+          alt="${title}${pending ? ' וממתינה לאישור' : ''}: ${esc(formData.name)}, שולחן ל-${formData.guests} סועדים, ${formatDisplay(formData.date)} בשעה ${formData.time}">
         <div class="card-fallback" id="cardFallback" hidden>
-          <h2>ההזמנה אושרה</h2>
+          <h2>${title}</h2>
+          ${pending ? '<p>ממתינה לאישור. נעדכן אתכם בוואטסאפ.</p>' : ''}
           <p>${esc(formData.name)}, שולחן ל-${formData.guests} סועדים</p>
           <p>${formatDisplay(formData.date)} בשעה ${formData.time}</p>
         </div>
       </div>
       <a class="btn-whatsapp" id="waLink" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">שליחה לוואטסאפ שלי</a>
-      ${IS_ANDROID
+      ${pending ? '' : IS_ANDROID
         ? `<a class="btn-outline" id="calLink" href="${googleCalendarUrl()}" target="_blank" rel="noopener">הוספה ליומן</a>`
         : `<button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>`}
     `;
-    if (!IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
+    if (!pending && !IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
     prepareCard();
   } else if (result === 'full') {
     stepIndex = 0;
@@ -715,7 +727,8 @@ async function submitBooking() {
     formData.date = null;
     renderStep();
   } else {
-    errEl.textContent = result === 'invalid' ? 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.' : 'שעה לא תקינה, נסו שוב.';
+    errEl.textContent = result === 'invalid' ? 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.'
+      : 'השעה שבחרתם כבר לא זמינה. לחצו על השעה למעלה ובחרו שעה מאוחרת יותר.';
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';
@@ -742,19 +755,24 @@ function drawBookingCard(canvas, b) {
   c.fillStyle = ink; c.fillRect(0, 0, CARD_W, 270);
   text(b.business + ' //', 160, 120, 900, paper);
   text('הזמנת מקומות', 225, 40, 700, 'rgba(240,232,208,.65)');
-  text('ההזמנה אושרה', 380, 68, 900, ink);
+  text(b.pending ? 'הבקשה התקבלה' : 'ההזמנה אושרה', 380, 68, 900, ink);
   text(b.name, 465, 54, 600, soft);
   dashed(530);
   text(b.weekday + ' · ' + b.dateShort, 650, 70, 800, ink);
   text(b.time, 850, 190, 900, ink);
   text(`שולחן ל-${b.guests} סועדים`, 950, 58, 600, ink);
   dashed(1020);
-  text('נחכה עד 15 דקות משעת ההזמנה', 1100, 38, 400, soft);
-  text('מצפים לראותכם ✳', 1160, 38, 400, soft);
+  if (b.pending) {
+    text('ממתינה לאישור · נעדכן אתכם בוואטסאפ', 1100, 40, 700, ink);
+    text('נחכה עד 15 דקות משעת ההזמנה', 1160, 38, 400, soft);
+  } else {
+    text('נחכה עד 15 דקות משעת ההזמנה', 1100, 38, 400, soft);
+    text('מצפים לראותכם ✳', 1160, 38, 400, soft);
+  }
   if (b.bookingId) text('מספר הזמנה ' + b.bookingId, 1285, 32, 400, soft);
 }
 function cardData() {
-  return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId,
+  return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId, pending: formData.pending,
     dateShort: formatDisplay(formData.date),
     weekday: fromDateStr(formData.date).toLocaleDateString('he-IL', { weekday: 'long' }) };
 }
