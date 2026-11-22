@@ -44,14 +44,20 @@ Same owner as the IzaZoo management app (repository
 - Optional confirmation email: edge function `send-confirmation` using Resend.
 - Backend: its own Supabase project, separate from IzaZoo: "IZA Bar
   reservation", id `brpovhypzsgwsnuenpfj` (free plan; it pauses after
-  inactivity and was paused in Nov 2026). Only the publishable key is in the
+  inactivity; restored 22 Nov 2026 with the owner's OK; database time zone
+  is UTC; 2 test bookings, no login users yet). Only the publishable key is in the
   pages. The supabase-js library is loaded from a CDN (jsdelivr, unpinned
   version `@2`); IzaZoo uses a bundled copy instead.
-- Hosting: the repository is connected to **two** hosting services, both
-  publishing every change: **Netlify** (site `remarkable-twilight-87b52c`,
-  probably https://remarkable-twilight-87b52c.netlify.app) and **Cloudflare**
-  ("Workers Builds: iza-bar-reservation"). Ask the owner which one to keep and
-  disconnect the other, so there is one booking address.
+- Hosting (owner's decision, Nov 2026): **exactly like IzaZoo: GitHub Pages
+  from `main` plus Supabase.** The repository is being made public for that
+  (free Pages needs a public repository; it holds no secrets or customer data,
+  only the publishable key that is in the page anyway). Address:
+  https://fertmana-eng.github.io/iza-bar-reservation/ (manager page:
+  `admin.html`). Until then it is also published by **Netlify** (site
+  `remarkable-twilight-87b52c`) and **Cloudflare** ("Workers Builds:
+  iza-bar-reservation"); once the GitHub address works, the owner switches
+  both off. Cloudflare's check fails on pull-request branches but succeeds on
+  `main` (harmless; goes away when Cloudflare is disconnected).
 - Database changes and the edge function are kept in `supabase/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
@@ -63,9 +69,8 @@ Same owner as the IzaZoo management app (repository
    (cancel), and read all tables. Since the publishable key is in the public
    page, anyone can do this, not only someone with the admin link. Needs: a
    manager login on `admin.html` and policies for logged-in managers only.
-2. **`check_availability` is missing from the SQL files.** The guests step calls
-   it; unless it was created directly in the database, customers get "שגיאה
-   בבדיקת זמינות" and can't book. Check the real database (project is paused).
+2. ~~`check_availability` missing~~: it exists in the real database (created
+   by hand in Sept); now saved as `supabase/migrations/05_check_availability.sql`.
 3. **Time zone.** The database's `current_date`/`current_time` are UTC, so the
    17:00 same-day cutoff really applies at about 19:00–20:00 Israel time. The
    pages use `toISOString()` for "today", which is UTC too (wrong date between
@@ -76,20 +81,19 @@ Same owner as the IzaZoo management app (repository
    so it could be used to send emails through the owner's Resend account.
    Better: send the email from the database side after a real booking, or have
    the function look up the booking itself.
-6. `book_reservation` has two versions in the SQL files (6 and 7 parameters);
-   the second `create or replace` with a new parameter makes a second
-   function rather than replacing the first. Check which exist and drop the
-   old one. Functions have no `search_path` set and don't limit text length or
-   guest count.
+6. The functions (`book_reservation`, `available_spots`, `check_availability`)
+   have no `search_path` set and don't limit text length or guest count.
+   (Only the 7-parameter `book_reservation` exists in the real database.)
 7. The `admin_password_hash` setting is unused (left over).
 
 ## Next steps (in order)
 
-1. Restore the Supabase project (ask the owner first), look at the real
-   database, write a saved real-database check (`tests/db/checks.sql`, like
-   IzaZoo's) and fix problems 1–2 (security first).
-2. Fix 3–6, one change each.
-3. Choose one host with the owner (Netlify or Cloudflare) and disconnect the other.
+1. Fix problem 1 (manager login + closing customer data to the public), with
+   a saved real-database check (`tests/db/checks.sql`, like IzaZoo's).
+2. Fix 3–6, one change each. Real-database facts (Nov 2026): anon and
+   authenticated have every table permission on all three tables (Supabase's
+   default), so the policies are the only protection.
+3. Once GitHub Pages works, the owner disconnects Netlify and Cloudflare.
 4. Then new features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
