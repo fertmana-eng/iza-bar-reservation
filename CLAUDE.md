@@ -231,6 +231,9 @@ with a fixed clock in Israel time.
 - **In `tests/db/checks.sql`, don't name a table alias `r`**: the block
   already has a loop variable `r`, and PL/pgSQL mixes them up ("record r has
   no field ...").
+- **In tests, wait for the result, not a fixed pause.** GitHub's machine is
+  slower than this one: a test that checked for a WhatsApp window after
+  0.4 s failed there once. Use `waitForEvent` / `waitForFunction`.
 - **In tests, never compare a page element object with `assert`.** When the
   check fails, Node tries to print the whole browser object and runs out of
   memory (the session's processes get killed). Compare plain values
