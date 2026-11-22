@@ -91,10 +91,14 @@ Same owner as the IzaZoo management app (repository
    current version as is: anyone can call it with any address, so it could
    be used to send emails through the owner's account. Send the email from
    the booking itself instead (look up the booking; only to its address).
-6. The functions (`book_reservation`, `available_spots`, `check_availability`)
-   have no `search_path` set and don't limit text length or guest count.
-   (Only the 7-parameter `book_reservation` exists in the real database.)
-7. The `admin_password_hash` setting is unused (left over).
+6. **Function limits** (`08_booking_limits.sql`, given to the owner to run;
+   it replaces `book_reservation` and deletes a row, so the connector can't):
+   guests 1–10, date today to +30 days, name 1–80, phone 7–20 of digits
+   `+ - ( )` and spaces, note ≤300, email ≤120 and address-shaped, else
+   `'invalid'`; fixed `search_path` on all three functions. The page checks
+   the same phone/email rules and has matching `maxlength`s. Dry-run on the
+   real database passed. After it runs: `tests/db/checks.sql` must pass.
+7. The unused `admin_password_hash` setting: removed by `08_booking_limits.sql`.
 8. ~~"הוספה ליומן" on Android~~: fixed 22 Nov 2026. Android opens Google
    Calendar with the booking filled in (Chrome on Android can't open a
    calendar file straight into the calendar, a platform rule); iPhone and
@@ -104,11 +108,12 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Fix 6 (function limits); ask the owner about emails (5). Note: Supabase gives
+1. Owner runs `08_booking_limits.sql`; then run `tests/db/checks.sql`.
+2. Ask the owner about emails (5). Note: Supabase gives
    anon and authenticated full permissions on any NEW table by default; set
    the grants explicitly whenever a table is added (06_manager_login.sql
    did this for the existing three).
-2. Then new features with the owner (use a short planning interview first).
+3. Then new features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
 
@@ -152,7 +157,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (25 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (27 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero

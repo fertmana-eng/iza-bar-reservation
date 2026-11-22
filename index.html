@@ -279,6 +279,10 @@ const formData = { date: null, time: null, name: '', phone: '', guests: 2, note:
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
 // own numbers (never toISOString, which shifts to UTC and moved every day back).
+// The same limits the database checks (supabase/migrations/08_booking_limits.sql)
+const PHONE_OK = /^[0-9+() -]{7,20}$/;
+const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 function israelNow() {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -541,11 +545,11 @@ function renderDetailsStep() {
     <form id="detailsForm">
       <div class="field">
         <label for="nameInput">שם</label>
-        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" value="${esc(formData.name)}" required autofocus>
+        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" maxlength="80" value="${esc(formData.name)}" required autofocus>
       </div>
       <div class="field">
         <label for="phoneInput">טלפון</label>
-        <input id="phoneInput" type="tel" placeholder="050-0000000" value="${esc(formData.phone)}" required>
+        <input id="phoneInput" type="tel" placeholder="050-0000000" maxlength="20" value="${esc(formData.phone)}" required>
       </div>
       <div id="detailsError" class="error" style="display:none;"></div>
       <button type="submit" class="primary">לסיכום ההזמנה</button>
@@ -555,9 +559,10 @@ function renderDetailsStep() {
     e.preventDefault();
     const name = document.getElementById('nameInput').value.trim();
     const phone = document.getElementById('phoneInput').value.trim();
-    if (!name || !phone) {
+    const problem = !name || !phone ? 'נא למלא שם וטלפון.' : !PHONE_OK.test(phone) ? 'מספר הטלפון לא תקין.' : null;
+    if (problem) {
       const err = document.getElementById('detailsError');
-      err.textContent = 'נא למלא שם וטלפון.';
+      err.textContent = problem;
       err.style.display = 'block';
       return;
     }
@@ -637,11 +642,11 @@ function renderExtraStep() {
     ${fullSummaryHtml()}
     <div class="field">
       <label for="noteInput">הערה (לא חובה)</label>
-      <textarea id="noteInput" rows="2" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
+      <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
     </div>
     <div class="field">
       <label for="emailInput">אימייל לאישור (לא חובה)</label>
-      <input id="emailInput" type="email" placeholder="name@example.com" value="${esc(formData.email)}">
+      <input id="emailInput" type="email" placeholder="name@example.com" maxlength="120" value="${esc(formData.email)}">
     </div>
     <div id="submitError" class="error" style="display:none;"></div>
     <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
@@ -653,6 +658,12 @@ function renderExtraStep() {
 async function submitBooking() {
   formData.note = document.getElementById('noteInput').value.trim();
   formData.email = document.getElementById('emailInput').value.trim();
+  if (formData.email && !EMAIL_OK.test(formData.email)) {
+    const errEl = document.getElementById('submitError');
+    errEl.textContent = 'כתובת האימייל לא תקינה. אפשר גם להשאיר את השדה ריק.';
+    errEl.style.display = 'block';
+    return;
+  }
 
   const btn = document.getElementById('submitBtn');
   const errEl = document.getElementById('submitError');
@@ -717,7 +728,7 @@ async function submitBooking() {
     formData.date = null;
     renderStep();
   } else {
-    errEl.textContent = 'שעה לא תקינה, נסו שוב.';
+    errEl.textContent = result === 'invalid' ? 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.' : 'שעה לא תקינה, נסו שוב.';
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';

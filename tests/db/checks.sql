@@ -11,7 +11,7 @@
 do $checks$
 declare
   d date := current_date + 7;
-  r record; n int; ok boolean; total int := 0; failed text[] := '{}';
+  r record; n int; ok boolean; ok_list text; total int := 0; failed text[] := '{}';
 begin
   -- ---------- structure ----------
   total:=total+1;
@@ -49,6 +49,16 @@ begin
                 and 'TimeZone=Asia/Jerusalem'=any(proconfig))
     then failed:=failed||'book_reservation does not run in Israel time'::text; end if;
 
+  -- functions with extra rights must have a fixed search_path
+  for r in select p.proname, p.proconfig from pg_proc p where p.pronamespace='public'::regnamespace and p.prosecdef loop
+    total:=total+1;
+    if not exists(select 1 from unnest(r.proconfig) c where c like 'search_path=%')
+      then failed:=failed||(r.proname||': no fixed search_path'); end if;
+  end loop;
+  total:=total+1;
+  if exists(select 1 from public.settings where key not in ('arrival_start','arrival_end','booking_cutoff'))
+    then failed:=failed||'unexpected settings rows'::text; end if;
+
   -- ---------- as the public (anyone with the page's key) ----------
   perform set_config('role','anon',true);
   perform set_config('request.jwt.claims','{"role":"anon"}',true);
@@ -69,6 +79,15 @@ begin
   total:=total+1;
   select count(*) into n from public.book_reservation(d,'18:00','בדיקה','050-0000000',2,null,null) b where b.result='confirmed';
   if n<>1 then failed:=failed||'a customer cannot book'::text; end if;
+  -- the function refuses what the page would never send (08_booking_limits.sql)
+  total:=total+1;
+  select string_agg(b.result,',') into ok_list from (
+    select (public.book_reservation(d,'18:00','x','050-0000000',11,null,null)).result
+    union all select (public.book_reservation(current_date-1,'18:00','x','050-0000000',2,null,null)).result
+    union all select (public.book_reservation(d,'18:00',repeat('x',81),'050-0000000',2,null,null)).result
+    union all select (public.book_reservation(d,'18:00','x','abc',2,null,null)).result
+    union all select (public.book_reservation(d,'18:00','x','050-0000000',2,null,'nope')).result) b;
+  if ok_list<>'invalid,invalid,invalid,invalid,invalid' then failed:=failed||('bad input not refused: '||ok_list); end if;
   total:=total+1;
   if public.available_spots(d) is null or public.check_availability(d,2) is null then failed:=failed||'availability functions fail for the public'::text; end if;
 
