@@ -31,7 +31,9 @@ Same owner as the IzaZoo management app (repository
   welcome text → date (up to 30 days ahead) → number of guests (1–10) →
   arrival time (17:00–21:00, 15-minute steps) → name and phone → summary with
   optional note → confirmation with "send to my WhatsApp" and "add
-  to calendar", and a preview of the booking card. Same-day online booking closes at 17:00. Outdoor seating can't
+  to calendar". The confirmation screen shows only the booking card picture
+  (owner: no double presentation); plain text only if the picture can't be
+  drawn. Same-day online booking closes at 17:00. Outdoor seating can't
   be booked (walk-in only), as the welcome text says.
 - `admin.html`: the manager page: login first, then the bookings of a chosen
   day grouped into high tables / low tables / bar, with totals, a cancel
@@ -149,7 +151,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (29 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (30 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
