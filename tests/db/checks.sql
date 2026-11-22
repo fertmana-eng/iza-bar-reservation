@@ -41,7 +41,7 @@ begin
   -- functions the booking page needs are callable by the public; nothing else is
   for r in select p.oid, p.proname from pg_proc p where p.pronamespace='public'::regnamespace loop
     total:=total+1;
-    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability','get_booking','cancel_booking','update_booking_note'))
+    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability','get_booking','cancel_booking','update_booking_note','change_booking'))
       then failed:=failed||(r.proname||': wrong public access'); end if;
   end loop;
 
@@ -63,6 +63,18 @@ begin
      or (select value from public.settings where key='approval_from')<>'16:00'
     then failed:=failed||'settings: expected cutoff 20:00 and approval from 16:00'::text; end if;
   -- same-day approval window (09_approval_window.sql): statuses, the manager's answers, held tables
+  -- changes (11_booking_changes.sql): only the manager answers; a waiting change keeps its original table
+  total:=total+1;
+  if has_function_privilege('anon','public.decide_request(bigint,boolean)','EXECUTE')
+     or not has_function_privilege('authenticated','public.decide_request(bigint,boolean)','EXECUTE')
+    then failed:=failed||'decide_request: only the logged-in manager may call it'::text; end if;
+  total:=total+1;
+  insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status,prev)
+    select d,'20:30','בדיקת שינוי','050-0000000',2,null,'bar_pool','pending',
+           jsonb_build_object('reservation_date',d,'arrival_time','19:00','guests',2,'assigned_table_id',id,'assigned_kind','table')
+    from public.venue_tables where kind='table' and active and not public.table_taken(id,d,null) order by id limit 1
+    returning (prev->>'assigned_table_id')::int into n;
+  if n is null or not public.table_taken(n,d,null) then failed:=failed||'a waiting change does not hold its original table'::text; end if;
   total:=total+1;
   if not exists(select 1 from pg_constraint where conname='reservations_status_check')
      or not exists(select 1 from pg_policies where schemaname='public' and tablename='reservations' and cmd='UPDATE'
@@ -116,8 +128,14 @@ begin
     if public.update_booking_note(gen_random_uuid(),'x')<>'not_found' or public.cancel_booking(gen_random_uuid())<>'not_found'
       then failed:=failed||'a wrong secret can change a booking'::text; end if;
     if public.update_booking_note(tok,'הערה')<>'saved' then failed:=failed||'the link cannot save a comment'::text; end if;
+    if public.change_booking(gen_random_uuid(), d, '19:00', 2)<>'not_found' then failed:=failed||'a wrong secret can change a booking'::text; end if;
+    if public.change_booking(tok, d, '19:00', 11)<>'invalid' then failed:=failed||'a change to 11 guests is not refused'::text; end if;
+    if public.change_booking(tok, d, '20:00', 3) not in ('confirmed','full') then failed:=failed||'the link cannot change the booking'::text; end if;
     if public.cancel_booking(tok)<>'cancelled' then failed:=failed||'the link cannot cancel'::text; end if;
   end if;
+  total:=total+1;
+  begin perform public.decide_request(1, true); failed:=failed||'the public can approve requests'::text;
+  exception when insufficient_privilege then null; end;
   total:=total+1;
   if public.available_spots(d) is null or public.check_availability(d,2) is null then failed:=failed||'availability functions fail for the public'::text; end if;
 

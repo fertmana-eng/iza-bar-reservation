@@ -384,6 +384,30 @@ describe('manager page',()=>{
     await page.evaluate(r=>{__db.reservations.push(r);document.dispatchEvent(new Event('visibilitychange'));},pendingRow);
     await page.waitForSelector('.pending-card');await ctx.close();
   });
+  test('a change waiting for approval shows what changed; declining keeps the original',async()=>{
+    const change={...pendingRow,arrival_time:'20:30:00',guests:5,prev:{reservation_date:'2026-11-22',arrival_time:'19:00:00',guests:2,assigned_table_id:1,assigned_kind:'table'}};
+    const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[change]}});
+    assert.match(await text(page,'.pending-card'),/שינוי מבוקש: 19:00 · 2 סועדים ← 20:30 · 5 סועדים/);
+    assert.match(decodeURIComponent(await page.getAttribute('.approve-btn','href')),/השינוי בהזמנה שלך לעיזה בר אושר ✳\n22\.11\.2026 בשעה 20:30, שולחן ל-5/);
+    assert.match(decodeURIComponent(await page.getAttribute('.decline-link','href')),/לא נוכל לאשר את השינוי.*ההזמנה המקורית שלך בתוקף: 22\.11\.2026 בשעה 19:00, שולחן ל-2\./);
+    const opened=ctx.waitForEvent('page',{timeout:10000});
+    await page.click('.decline-link');await opened;
+    assert.deepEqual(dialogs,['לדחות את השינוי? ההזמנה המקורית תישאר בתוקף.']);
+    await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='decide_request').map(o=>o.args)),[{p_id:5,p_approve:false}]);
+    assert.equal(await page.evaluate(()=>__db.reservations[0].arrival_time),'19:00:00');await ctx.close();
+  });
+  test('customer changes and cancellations are marked',async()=>{
+    const rows=[{...reservations[0],changed_at:'2026-11-21T10:00:00Z'},
+      {id:7,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'יוסי',phone:'050-7777777',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'cancelled',cancelled_by:'customer'},
+      {id:8,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'מנהל ביטל',phone:'050-8888888',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'cancelled',cancelled_by:null}];
+    const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations:rows}});
+    const t=await text(page,'#listContent');
+    assert.match(t,/1 הזמנות · 2 סועדים/);
+    assert.match(t,/רון · שולחן 1 שונתה ע״י הלקוח/);
+    assert.match(t,/בוטלו ע״י הלקוח 20:00 יוסי · שולחן 1/);
+    assert.doesNotMatch(t,/מנהל ביטל/);await ctx.close();
+  });
   test('Israeli phone numbers become WhatsApp numbers',async()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING});
     assert.deepEqual(await page.evaluate(()=>['052-3333333','+972 52-333-3333','(052) 333 3333'].map(waNumber)),['972523333333','972523333333','972523333333']);
@@ -429,6 +453,43 @@ describe('personal booking page (booking.html#secret)',()=>{
     await page.click('#cancelBtn');await page.waitForSelector('.closed-box');
     assert.deepEqual(await saved(),[]);await ctx.close();
   });
+  test('date, time and guests can be changed (confirmed at once)',async()=>{
+    const {page,ctx}=await openBooking();
+    await page.waitForSelector('#saveChange');
+    assert.deepEqual(await page.evaluate(()=>[dateInput.value,dateInput.min,dateInput.max,timeInput.value,guestsInput.value]),
+      ['2026-11-25','2026-11-22','2026-12-22','19:00','3']);
+    assert.deepEqual(await page.evaluate(()=>[...timeInput.options].map(o=>o.value).join(' ')),
+      '17:00 17:15 17:30 17:45 18:00 18:15 18:30 18:45 19:00 19:15 19:30 19:45 20:00 20:15 20:30 20:45 21:00');
+    await page.fill('#dateInput','2026-11-26');await page.dispatchEvent('#dateInput','change');
+    await page.selectOption('#timeInput','20:30');await page.selectOption('#guestsInput','4');
+    await page.click('#saveChange');await page.waitForSelector('#msg');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='change_booking').map(o=>o.args)),[{p_token:TOKEN,p_date:'2026-11-26',p_time:'20:30',p_guests:4}]);
+    assert.match(await text(page,'#msg'),/השינוי נשמר ואושר/);
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, שולחן ל-4 סועדים, 26.11 בשעה 20:30');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('izabar_my_bookings'))[0].time),'20:30');await ctx.close();
+  });
+  test('a same-day change after 16:00 waits for approval and shows the kept original',async()=>{
+    const {page,ctx}=await openBooking({},{cfg:{bookings:[bk()],changeResult:'pending'}});
+    await page.waitForSelector('#saveChange');await page.selectOption('#guestsInput','5');await page.click('#saveChange');
+    await page.waitForSelector('#pendingNote');
+    assert.match(await text(page,'#msg'),/השינוי נשלח לאישור\. נעדכן אתכם בוואטסאפ\. עד אז ההזמנה המקורית שמורה לכם/);
+    assert.match(await text(page,'#pendingNote'),/אם לא יאושר, נשארת ההזמנה המקורית: 25\.11 בשעה 19:00, 3 סועדים/);
+    assert.equal(await text(page,'#statusLabel'),'ממתינה לאישור');await ctx.close();
+  });
+  test('if nothing fits, the change is refused and the booking stays as it was',async()=>{
+    const {page,ctx}=await openBooking({},{cfg:{bookings:[bk()],changeResult:'full'}});
+    await page.waitForSelector('#saveChange');await page.selectOption('#guestsInput','10');await page.click('#saveChange');
+    await page.waitForSelector('#msg');
+    assert.match(await text(page,'#msg'),/אין מקום מתאים בשינוי הזה\. ההזמנה נשארה כמו שהייתה/);
+    assert.equal(await page.inputValue('#guestsInput'),'3');await ctx.close();
+  });
+  test('for today, only arrival times at least 30 minutes ahead are offered',async()=>{
+    const {page,ctx}=await openBooking({reservation_date:'2026-11-22',arrival_time:'20:00:00'},{time:'2026-11-22T18:40:00+02:00'});
+    await page.waitForSelector('#saveChange');
+    assert.equal(await page.evaluate(()=>[...timeInput.options].map(o=>o.value).join(' ')),'19:15 19:30 19:45 20:00 20:15 20:30 20:45 21:00');
+    await ctx.close();
+  });
   test('a request waiting for approval says so',async()=>{
     const {page,ctx}=await openBooking({status:'pending'});
     await page.waitForSelector('#cardPreview:not([hidden])');
@@ -459,6 +520,7 @@ describe('personal booking page (booking.html#secret)',()=>{
     const {page,ctx}=await openBooking({can_change:false});
     await page.waitForSelector('#cancelBtn');
     assert.equal(await page.isVisible('#noteInput'),false);
+    assert.equal(await page.isVisible('#saveChange'),false);
     assert.match(await text(page,'.note-view'),/יום הולדת/);
     assert.match(await text(page,'.page'),/אפשר לשנות פרטים עד שעה לפני ההגעה\. לשינויים כתבו לנו בוואטסאפ/);await ctx.close();
   });

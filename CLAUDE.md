@@ -140,10 +140,21 @@ Same owner as the IzaZoo management app (repository
    without the link: fixed with a second button "שליחת הקישור להזמנה
    לוואטסאפ" (plain wa.me text, which always keeps the link; shown only where
    the picture is shared) and "שליחת הקישור לוואטסאפ שלי" on the personal
-   page (owner to test). Next:
-   step 2 (change time/guests/date, approval rules, revert on decline,
-   manager page shows changes and customer cancellations), then step 4
-   (Android notifications). Step 2 of accounts (optional sign-in, history)
+   page (owner to test).
+   Step 2 built (22 Nov 2026, `11_booking_changes.sql`): the personal page
+   changes date / time / guests until 1 hour before arrival (same rules as
+   new bookings; a same-day change made 16:00-20:00 waits for approval).
+   While a change waits, the confirmed original is kept in `prev` and its
+   table stays held (`table_taken` / `bar_used` / `find_place` helpers, not
+   callable by the public); the manager answers with `decide_request`
+   (logged in only): approve confirms, decline restores the original. The
+   manager page shows "שינוי מבוקש: ... ← ...", a "שונתה ע״י הלקוח" tag and a
+   "בוטלו ע״י הלקוח" list. Part A applied via the connector; part B
+   (`11b_booking_changes_replace.sql`: book_reservation / check_availability
+   / available_spots use the helpers; get_booking returns the original's
+   details) to be run by the owner. Dry run at 17:31 Israel time passed
+   (request, change, decline restores, approve frees the original, locked,
+   invalid, public can't approve). Next: step 4 (Android notifications). Step 2 of accounts (optional sign-in, history)
    later. Reminders: customer sign-in would change the database's "logged in
    = manager" rule (must become an explicit manager role); SMS sign-in costs
    money per message; Apple sign-in needs a paid developer account; iPhone
@@ -193,7 +204,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (51 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (57 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero

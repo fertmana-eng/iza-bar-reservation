@@ -91,6 +91,10 @@
     background: #2fae60; color: #fff; border-radius: 10px; font-weight: 600; font-size: 14px; text-decoration: none;
   }
   .decline-link { color: var(--danger); font-size: 13px; text-decoration: underline; padding: 10px 4px; }
+  .res-change { flex-basis: 100%; font-size: 13px; color: #8a5a00; margin-top: 6px; font-weight: 600; }
+  .changed-tag { font-size: 11px; color: #8a5a00; background: #f6e7c4; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+  .cancelled-card { opacity: .6; }
+  .cancelled-card .res-name { text-decoration: line-through; }
   .cancel-link {
     color: var(--danger);
     font-size: 13px;
@@ -201,17 +205,40 @@ function waNumber(phone) {
   const d = String(phone).replace(/\D/g, '');
   return d.startsWith('972') ? d : d.startsWith('0') ? '972' + d.slice(1) : d;
 }
+function bookingLink(r) {
+  return r.access_token ? `\nלצפייה, שינוי או ביטול: ${new URL('booking.html#' + r.access_token, location.href).href}` : '';
+}
+// r.prev: the confirmed details kept while a change the customer made waits for approval
 function waLink(r, approve) {
   const when = `${formatDisplay(r.reservation_date || currentDate)} בשעה ${r.arrival_time.slice(0, 5)}`;
-  const text = approve
-    ? `שלום ${r.customer_name}, ההזמנה שלך ל${BUSINESS_NAME} אושרה ✳\n${when}, שולחן ל-${r.guests}.\nנחכה עד 15 דקות משעת ההזמנה. מחכים לך!`
-      + (r.access_token ? `\nלצפייה, שינוי או ביטול: ${new URL('booking.html#' + r.access_token, location.href).href}` : '')
-    : `שלום ${r.customer_name}, תודה שפנית ל${BUSINESS_NAME}. מצטערים, לא נוכל לאשר את ההזמנה ל-${when}. נשמח לראות אותך בפעם אחרת!`;
+  const p = r.prev, prevWhen = p ? `${formatDisplay(p.reservation_date)} בשעה ${String(p.arrival_time).slice(0, 5)}` : '';
+  const text = p
+    ? (approve
+      ? `שלום ${r.customer_name}, השינוי בהזמנה שלך ל${BUSINESS_NAME} אושר ✳\n${when}, שולחן ל-${r.guests}.\nנחכה עד 15 דקות משעת ההזמנה. מחכים לך!` + bookingLink(r)
+      : `שלום ${r.customer_name}, מצטערים, לא נוכל לאשר את השינוי בהזמנה שלך ל${BUSINESS_NAME}. ההזמנה המקורית שלך בתוקף: ${prevWhen}, שולחן ל-${p.guests}.` + bookingLink(r))
+    : (approve
+      ? `שלום ${r.customer_name}, ההזמנה שלך ל${BUSINESS_NAME} אושרה ✳\n${when}, שולחן ל-${r.guests}.\nנחכה עד 15 דקות משעת ההזמנה. מחכים לך!` + bookingLink(r)
+      : `שלום ${r.customer_name}, תודה שפנית ל${BUSINESS_NAME}. מצטערים, לא נוכל לאשר את ההזמנה ל-${when}. נשמח לראות אותך בפעם אחרת!`);
   return `https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`;
+}
+// "שינוי: 19:00, 2 סועדים ← 20:30, 5 סועדים" (the date only when it changes)
+function changeLine(r) {
+  const p = r.prev;
+  if (!p) return '';
+  const dated = p.reservation_date !== r.reservation_date;
+  const side = (d, t, g) => `${dated ? formatDisplay(d) + ' ' : ''}${String(t).slice(0, 5)} · ${g} סועדים`;
+  return `<div class="res-change">שינוי מבוקש: ${side(p.reservation_date, p.arrival_time, p.guests)} ← ${side(r.reservation_date, r.arrival_time, r.guests)}</div>`;
 }
 async function setStatus(id, status) {
   const { error } = await db.from('reservations').update({ status }).eq('id', id);
   if (error) saveError = 'השינוי לא נשמר. בדקו את החיבור ונסו שוב.';
+  renderList();
+}
+// Approving or declining a request or a change goes through the database, which also
+// restores the original booking when a change is declined (11_booking_changes.sql)
+async function decide(id, approve) {
+  const { error } = await db.rpc('decide_request', { p_id: Number(id), p_approve: approve });
+  if (error) saveError = 'התשובה לא נשמרה. בדקו את החיבור ונסו שוב.';
   renderList();
 }
 let saveError = null;
@@ -224,9 +251,9 @@ async function renderList(quiet) {
   const { data: tables, error: tablesError } = await db.from('venue_tables').select('id,name,area,kind').order('sort_order');
   const { data: rows, error: resError } = await db
     .from('reservations')
-    .select('id,reservation_date,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status,access_token')
+    .select('id,reservation_date,arrival_time,customer_name,phone,guests,note,assigned_table_id,assigned_kind,status,access_token,prev,changed_at,cancelled_by')
     .eq('reservation_date', currentDate)
-    .in('status', ['confirmed', 'pending'])
+    .in('status', ['confirmed', 'pending', 'cancelled'])
     .order('arrival_time');
   if (!document.getElementById('listContent')) return;   // signed out meanwhile
 
@@ -241,6 +268,7 @@ async function renderList(quiet) {
   const withTable = r => { const t = tableById[r.assigned_table_id]; return { ...r, area: t ? t.area : 'bar', tableName: t ? t.name : 'בר' }; };
   const pending = (rows || []).filter(r => r.status === 'pending').map(withTable);
   const reservations = (rows || []).filter(r => r.status === 'confirmed').map(withTable);
+  const cancelledByCustomer = (rows || []).filter(r => r.status === 'cancelled' && r.cancelled_by === 'customer').map(withTable);
   const totalGuests = reservations.reduce((s, r) => s + r.guests, 0);
 
   const areaLabels = { high: 'שולחנות גבוהים', low: 'שולחנות נמוכים', bar: 'בר' };
@@ -251,7 +279,7 @@ async function renderList(quiet) {
       <div class="res-row">
         <span class="res-time">${r.arrival_time.slice(0,5)}</span>
         <span class="res-name">
-          ${esc(r.customer_name)} · ${esc(r.tableName)}
+          ${esc(r.customer_name)} · ${esc(r.tableName)}${r.status === 'confirmed' && r.changed_at ? ' <span class="changed-tag">שונתה ע״י הלקוח</span>' : ''}
           ${r.note ? `<div class="res-note">${esc(r.note)}</div>` : ''}
         </span>
         <span class="res-guests">${r.guests} · ${esc(r.phone)}</span>
@@ -267,10 +295,10 @@ async function renderList(quiet) {
 
   if (pending.length) {
     html += `<div class="group-title pending-title">ממתינות לאישור</div><div class="card pending-card">`;
-    html += pending.map(r => rowHtml(r, `
+    html += pending.map(r => rowHtml(r, `${changeLine(r)}
         <span class="pending-actions">
           <a class="approve-btn" data-id="${r.id}" href="${waLink(r, true)}" target="_blank" rel="noopener">אישור</a>
-          <a class="decline-link" data-id="${r.id}" href="${waLink(r, false)}" target="_blank" rel="noopener">דחייה</a>
+          <a class="decline-link" data-id="${r.id}" ${r.prev ? 'data-change' : ''} href="${waLink(r, false)}" target="_blank" rel="noopener">דחייה</a>
         </span>`)).join('');
     html += `</div>`;
   }
@@ -279,6 +307,12 @@ async function renderList(quiet) {
     if (!groups[area]) continue;
     html += `<div class="group-title">${areaLabels[area]}</div><div class="card">`;
     html += groups[area].map(r => rowHtml(r, `<span class="cancel-link" data-id="${r.id}">בטל</span>`)).join('');
+    html += `</div>`;
+  }
+
+  if (cancelledByCustomer.length) {
+    html += `<div class="group-title">בוטלו ע״י הלקוח</div><div class="card cancelled-card">`;
+    html += cancelledByCustomer.map(r => rowHtml(r, '')).join('');
     html += `</div>`;
   }
 
@@ -295,12 +329,13 @@ async function renderList(quiet) {
   });
   // the link opens WhatsApp; the answer is saved at the same time
   content.querySelectorAll('.approve-btn').forEach(el => {
-    el.addEventListener('click', () => setStatus(el.getAttribute('data-id'), 'confirmed'));
+    el.addEventListener('click', () => decide(el.getAttribute('data-id'), true));
   });
   content.querySelectorAll('.decline-link').forEach(el => {
     el.addEventListener('click', e => {
-      if (!confirm('לדחות את הבקשה? השולחן ישתחרר.')) { e.preventDefault(); return; }
-      setStatus(el.getAttribute('data-id'), 'declined');
+      const change = el.hasAttribute('data-change');
+      if (!confirm(change ? 'לדחות את השינוי? ההזמנה המקורית תישאר בתוקף.' : 'לדחות את הבקשה? השולחן ישתחרר.')) { e.preventDefault(); return; }
+      decide(el.getAttribute('data-id'), false);
     });
   });
 }

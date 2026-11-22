@@ -37,6 +37,13 @@
   .closed-box h2 { font-weight: 900; font-size: 24px; margin: 0 0 8px; }
   .closed-box p { margin: 4px 0; color: var(--ink-soft); }
   label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+  .section-title { font-weight: 700; font-size: 15px; margin: 0 0 12px; }
+  .change-box { border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 16px 0 18px; margin: 0 0 22px; }
+  .change-grid { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr; gap: 10px; }
+  .change-grid .field { margin-bottom: 0; }
+  input[type=date], select { width: 100%; height: 48px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 4px;
+    padding: 0 10px; font-size: 16px; font-family: inherit; color: var(--ink); }
+  .pending-note { background: #f6e7c4; color: #5c3d00; border-radius: 6px; padding: 10px 12px; font-size: 14px; margin: 0 0 18px; text-align: center; }
   textarea { width: 100%; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 4px; padding: 13px 14px; font-size: 17px; font-family: inherit; color: var(--ink); resize: none; }
   textarea:focus { outline: none; border-color: var(--ink); }
   .note-view { background: var(--field-bg); border-radius: 4px; padding: 12px 14px; margin: 0; white-space: pre-wrap; }
@@ -92,6 +99,35 @@ let booking = null, message = null;
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Same rules as the booking page: arrivals 17:00-21:00 every 15 minutes; for today,
+// at least 30 minutes from now (rounded up), and nothing once same-day booking has closed.
+let hours = { start: '17:00', end: '21:00', cutoff: '20:00' };
+function israelNow() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const toTime = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+function addDays(dateStr, n) { const [y, m, d] = dateStr.split('-').map(Number), x = new Date(y, m - 1, d + n);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }
+function arrivalTimes(date) {
+  const now = israelNow();
+  let min = toMin(hours.start);
+  if (date === now.date) {
+    if (now.time >= hours.cutoff) return [];
+    min = Math.max(min, Math.ceil((toMin(now.time) + 30) / 15) * 15);
+  }
+  const out = [];
+  for (let m = min; m <= toMin(hours.end); m += 15) out.push(toTime(m));
+  return out;
+}
+async function loadHours() {
+  const { data } = await db.from('settings').select('key,value').in('key', ['arrival_start', 'arrival_end', 'booking_cutoff']);
+  const v = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+  hours = { start: v.arrival_start || hours.start, end: v.arrival_end || hours.end, cutoff: v.booking_cutoff || hours.cutoff };
+}
+
 function shortDate(d) { const [, m, day] = d.split('-').map(Number); return `${day}.${m}`; }
 const barWhatsApp = text => `https://wa.me/${BAR_WHATSAPP}?text=${encodeURIComponent(text)}`;
 const TOKEN_OK = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -107,7 +143,8 @@ async function load(quiet) {
   }
   const b = data && data[0];
   if (!b) return showNotFound();
-  const changed = !booking || ['status', 'note', 'can_change', 'can_cancel'].some(k => booking[k] !== b[k]);
+  const changed = !booking || ['status', 'note', 'can_change', 'can_cancel', 'reservation_date', 'arrival_time', 'guests', 'prev_date']
+    .some(k => booking[k] !== b[k]);
   booking = b;
   remember(b);
   // don't redraw under someone typing a comment
@@ -140,7 +177,21 @@ function render() {
     ${active
       ? `<img class="card-preview" id="cardPreview" alt="${STATUS[b.status]}: ${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים, ${when}" hidden>`
       : `<div class="closed-box"><h2>${STATUS[b.status]}</h2><p>${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים</p><p>${when}</p></div>`}
+    ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
+    ${b.status === 'pending' && b.prev_date ? `<p class="pending-note" id="pendingNote">השינוי ממתין לאישור. אם לא יאושר, נשארת ההזמנה המקורית:
+      ${shortDate(b.prev_date)} בשעה ${b.prev_time.slice(0, 5)}, ${b.prev_guests} סועדים.</p>` : ''}
     ${b.can_change ? `
+      <div class="change-box">
+        <p class="section-title">שינוי פרטי ההזמנה</p>
+        <div class="change-grid">
+          <div class="field"><label for="dateInput">תאריך</label>
+            <input type="date" id="dateInput" value="${b.reservation_date}" min="${israelNow().date}" max="${addDays(israelNow().date, 30)}"></div>
+          <div class="field"><label for="timeInput">שעה</label><select id="timeInput"></select></div>
+          <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput">
+            ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i + 1 === b.guests ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
+        </div>
+        <button type="button" class="btn-outline" id="saveChange">שמירת השינויים</button>
+      </div>
       <div class="field">
         <label for="noteInput">הערה להזמנה</label>
         <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(b.note)}</textarea>
@@ -149,7 +200,6 @@ function render() {
       : b.note ? `<div class="field"><label>הערה להזמנה</label><p class="note-view">${esc(b.note)}</p></div>` : ''}
     ${active ? `<a class="btn-outline" id="sendLink" href="https://wa.me/?text=${encodeURIComponent(`ההזמנה שלי ל${BUSINESS_NAME} - ${when}\nלצפייה, שינוי או ביטול: ${location.href}`)}" target="_blank" rel="noopener">שליחת הקישור לוואטסאפ שלי</a>` : ''}
     ${b.can_cancel ? `<button type="button" class="btn-danger" id="cancelBtn">ביטול ההזמנה</button>` : ''}
-    ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
     ${active && !b.can_change ? `<p class="hint">אפשר לשנות פרטים עד שעה לפני ההגעה. לשינויים כתבו לנו בוואטסאפ.</p>` : ''}
     <div class="contact">
       לשאלות ולשינויים אפשר לכתוב לנו
@@ -158,6 +208,11 @@ function render() {
   message = null;
   if (active) drawCard();
   document.getElementById('saveNote')?.addEventListener('click', saveNote);
+  if (b.can_change) {
+    fillTimes(b.arrival_time.slice(0, 5));
+    document.getElementById('dateInput').addEventListener('change', () => fillTimes(document.getElementById('timeInput').value));
+    document.getElementById('saveChange').addEventListener('click', saveChange);
+  }
   document.getElementById('cancelBtn')?.addEventListener('click', cancelBooking);
 }
 
@@ -171,6 +226,36 @@ async function drawCard() {
       time: booking.arrival_time.slice(0, 5), date: booking.reservation_date, bookingId: booking.id, pending: booking.status === 'pending' });
     img.src = canvas.toDataURL('image/png'); img.hidden = false;
   } catch (e) { /* the status line and buttons are enough without the picture */ }
+}
+
+function fillTimes(keep) {
+  const date = document.getElementById('dateInput').value, times = arrivalTimes(date), sel = document.getElementById('timeInput');
+  sel.innerHTML = times.length ? times.map(t => `<option ${t === keep ? 'selected' : ''}>${t}</option>`).join('')
+    : '<option value="">אין שעות</option>';
+  document.getElementById('saveChange').disabled = !times.length;
+}
+
+async function saveChange() {
+  const date = document.getElementById('dateInput').value, time = document.getElementById('timeInput').value;
+  const guests = Number(document.getElementById('guestsInput').value);
+  if (!date || !time) return;
+  const wasConfirmed = booking.status === 'confirmed';
+  const btn = document.getElementById('saveChange');
+  btn.disabled = true; btn.textContent = 'שומר...';
+  const { data, error } = await db.rpc('change_booking', { p_token: token, p_date: date, p_time: time, p_guests: guests });
+  const texts = {
+    confirmed: { ok: true, text: 'השינוי נשמר ואושר.' },
+    pending: { ok: true, text: wasConfirmed ? 'השינוי נשלח לאישור. נעדכן אתכם בוואטסאפ. עד אז ההזמנה המקורית שמורה לכם.'
+                                            : 'הבקשה עודכנה וממתינה לאישור. נעדכן אתכם בוואטסאפ.' },
+    unchanged: { text: 'לא שיניתם כלום.' },
+    full: { text: 'אין מקום מתאים בשינוי הזה. ההזמנה נשארה כמו שהייתה.' },
+    closed: { text: 'אי אפשר להזמין להיום אחרי 20:00. ההזמנה נשארה כמו שהייתה.' },
+    invalid_time: { text: 'השעה שבחרתם כבר לא זמינה. בחרו שעה מאוחרת יותר.' },
+    locked: { text: 'כבר אי אפשר לשנות את ההזמנה. כתבו לנו בוואטסאפ.' }
+  };
+  message = error ? { text: 'השינוי לא נשמר. בדקו את החיבור ונסו שוב.' } : texts[data] || { text: 'השינוי לא נשמר.' };
+  booking = null;
+  await load();
 }
 
 async function saveNote() {
@@ -201,7 +286,7 @@ async function cancelBooking() {
 setInterval(() => { if (document.visibilityState === 'visible') load(true); }, 30000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(true); });
 window.addEventListener('hashchange', () => location.reload());
-load();
+loadHours().finally(() => load());
 </script>
 </body>
 </html>
