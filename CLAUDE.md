@@ -129,9 +129,15 @@ Same owner as the IzaZoo management app (repository
    (054-5904470; the bar can't be reached by phone). "ניהול ההזמנה" button on
    the confirmation screen. Database: `10_booking_link.sql` part A applied
    via the connector; part B (`10b_book_reservation_token.sql`, returns the
-   secret) given to the owner. Next: step 2 (change time/guests/date,
-   approval rules, revert on decline, manager page shows changes and
-   customer cancellations), step 3 (link in both WhatsApp messages), step 4
+   secret) run by the owner 22 Nov 2026; database check ALL 32 PASSED.
+   Step 3 done early (the owner lost the link after closing the page): the
+   link is the caption of the shared card picture (Android's WhatsApp keeps
+   it; some iPhones drop it), it's in the text-message fallback and in the
+   manager's approval message, and the phone remembers its upcoming bookings
+   (`izabar_my_bookings` in local storage; shown as "ההזמנות שלי" on the
+   welcome screen; opening a link adds it, cancelling removes it). Next:
+   step 2 (change time/guests/date, approval rules, revert on decline,
+   manager page shows changes and customer cancellations), then step 4
    (Android notifications). Step 2 of accounts (optional sign-in, history)
    later. Reminders: customer sign-in would change the database's "logged in
    = manager" rule (must become an explicit manager role); SMS sign-in costs
@@ -182,7 +188,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (49 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (51 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero

@@ -1,6 +1,6 @@
 # Plan: personal booking link (step 1 of customer accounts)
 
-Status: **approved by the owner** (planning interview, 22 Nov 2026). Step 1 built (Nov 2026); steps 2-4 next.
+Status: **approved by the owner** (planning interview, 22 Nov 2026). Steps 1 and 3 built (Nov 2026); step 2 and 4 next. Added during testing: the phone remembers its bookings ("ההזמנות שלי" on the welcome screen), because a customer who closes the page otherwise loses the link.
 Step 2 (optional customer accounts with history, e.g. Google sign-in) comes later
 and reuses all of this.
 

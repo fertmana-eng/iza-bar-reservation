@@ -54,7 +54,7 @@ describe('customer booking page',()=>{
   });
   // a phone that can share files: record what would go to the share sheet
   const fakeShare=()=>{window.__shared=[];navigator.canShare=d=>!!(d&&d.files);
-    navigator.share=async d=>{window.__shared.push((d.files||[]).map(f=>f.name+'|'+f.type+'|'+(f.size>10000)));};};
+    navigator.share=async d=>{window.__shared.push((d.files||[]).map(f=>f.name+'|'+f.type+'|'+(f.size>10000)));window.__sharedText=d.text;};};
   test('on a phone, the WhatsApp button shares a picture of the booking',async()=>{
     const {page,ctx,errors}=await open({time:MORNING,init:fakeShare});
     await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
@@ -63,6 +63,8 @@ describe('customer booking page',()=>{
     const pages=ctx.pages().length;
     await page.click('#waLink');await page.waitForTimeout(300);
     assert.deepEqual(await page.evaluate(()=>window.__shared),[['izabar-booking.png|image/png|true']]);
+    // the private link goes along as the picture's caption
+    assert.match(await page.evaluate(()=>window.__sharedText),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111-2222-4333-8444-555555555555$/);
     assert.equal(ctx.pages().length,pages,'no WhatsApp text link opened');
     assert.deepEqual(errors,[]);await ctx.close();
   });
@@ -78,7 +80,7 @@ describe('customer booking page',()=>{
     await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
     const href=await page.getAttribute('#waLink','href');
     assert.ok(href.startsWith('https://wa.me/?text='));
-    assert.match(decodeURIComponent(href),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15/);
+    assert.match(decodeURIComponent(href),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#11111111/);
     await ctx.close();
   });
   // Same-day rules by the hour of booking (owner, Nov 2026): before 16:00 confirmed,
@@ -123,6 +125,18 @@ describe('customer booking page',()=>{
     const second=await open({time:MORNING,cfg:{token:null}});      // a database without the link yet: no button
     await fillBooking(second.page);await second.page.click('#submitBtn');await second.page.waitForSelector('.success');
     assert.equal(await second.page.isVisible('#manageLink'),false);await second.ctx.close();
+  });
+  test('the phone remembers its bookings: "my bookings" on the welcome screen',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    assert.equal(await page.isVisible('#myBookings'),false,'nothing before the first booking');
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
+    await page.evaluate(()=>{const l=JSON.parse(localStorage.getItem('izabar_my_bookings'));
+      l.push({token:'99999999-2222-4333-8444-555555555555',date:'2026-11-01',time:'18:00',guests:2});   // an old one: not shown
+      localStorage.setItem('izabar_my_bookings',JSON.stringify(l));});
+    await page.reload();await page.waitForSelector('#myBookings');
+    assert.match(await text(page,'#myBookings'),/^ההזמנות שלי 25\.11 · 17:15 · 3 סועדים לצפייה ושינוי ‹$/);
+    assert.equal(await page.getAttribute('.my-booking','href'),'booking.html#11111111-2222-4333-8444-555555555555');
+    await ctx.close();
   });
   test('there is no email field (owner decided against emails)',async()=>{
     const {page,ctx}=await open({time:MORNING});
@@ -325,7 +339,7 @@ describe('manager page',()=>{
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('#listContent img,#listContent script,#listContent b').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  const pendingRow={id:5,reservation_date:'2026-11-22',arrival_time:'19:30:00',customer_name:'נועה',phone:'052-3333333',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending'};
+  const pendingRow={id:5,reservation_date:'2026-11-22',arrival_time:'19:30:00',customer_name:'נועה',phone:'052-3333333',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'pending',access_token:'aaaaaaaa-2222-4333-8444-555555555555'};
   test('requests waiting for approval are listed first, with approve and decline',async()=>{
     const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations:[...reservations,pendingRow]}});
     const t=await text(page,'#listContent');
@@ -333,7 +347,7 @@ describe('manager page',()=>{
     assert.match(t,/ממתינות לאישור 19:30 נועה · שולחן 4 4 · 052-3333333 אישור דחייה/);
     const href=await page.getAttribute('.approve-btn','href');
     assert.ok(href.startsWith('https://wa.me/972523333333?text='));
-    assert.match(decodeURIComponent(href),/שלום נועה, ההזמנה שלך לעיזה בר אושרה ✳\n22\.11\.2026 בשעה 19:30, שולחן ל-4/);
+    assert.match(decodeURIComponent(href),/שלום נועה, ההזמנה שלך לעיזה בר אושרה ✳\n22\.11\.2026 בשעה 19:30, שולחן ל-4\.\nנחכה עד 15 דקות משעת ההזמנה\. מחכים לך!\nלצפייה, שינוי או ביטול: http:\/\/localhost:\d+\/booking\.html#aaaaaaaa-2222-4333-8444-555555555555$/);
     assert.match(decodeURIComponent(await page.getAttribute('.decline-link','href')),/מצטערים, לא נוכל לאשר את ההזמנה ל-22\.11\.2026 בשעה 19:30/);
     assert.deepEqual(errors,[]);await ctx.close();
   });
@@ -401,6 +415,14 @@ describe('personal booking page (booking.html#secret)',()=>{
     assert.equal(await page.inputValue('#noteInput'),'יום הולדת');
     assert.ok((await page.getAttribute('#barWa','href')).startsWith(BAR_WA+'?text='));
     assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('opening the link once makes the phone remember the booking; cancelling forgets it',async()=>{
+    const {page,ctx}=await openBooking({},{dismissDialogs:false});
+    await page.waitForSelector('#cancelBtn');
+    const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('izabar_my_bookings')||'[]'));
+    assert.deepEqual(await saved(),[{token:TOKEN,date:'2026-11-25',time:'19:00',guests:3}]);
+    await page.click('#cancelBtn');await page.waitForSelector('.closed-box');
+    assert.deepEqual(await saved(),[]);await ctx.close();
   });
   test('a request waiting for approval says so',async()=>{
     const {page,ctx}=await openBooking({status:'pending'});

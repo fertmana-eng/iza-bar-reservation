@@ -16,6 +16,7 @@ const TOK='11111111-2222-4333-8444-555555555555';
 const BK=(x={})=>({access_token:TOK,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...x});
 const STATES=[
  ['intro',async p=>{}],
+ ['intro-mine',async p=>{},{},undefined,{init:()=>localStorage.setItem('izabar_my_bookings',JSON.stringify([{token:'11111111-2222-4333-8444-555555555555',date:'2026-11-25',time:'19:00',guests:3}]))}],
  ['date',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');}],
  ['date-full',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForTimeout(200);},{spots:0}],
  ['guests',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForSelector('#guestsNext');}],
