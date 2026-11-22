@@ -7,20 +7,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
+  /* Same look as the manager's tablet screen (admin.html): light background, white
+     rounded boxes, dark green buttons, the system font, the red IZAZOO logo.
+     (Heebo is still loaded: the booking card picture is drawn with it.) */
   :root {
-    --paper: #f0e8d0;
-    --paper-muted: rgba(240,232,208,0.62);
-    --ink: #1c1610;
-    --ink-soft: #5a4f3c;
-    --line: rgba(28,22,16,0.28);
-    --muted: rgba(28,22,16,0.55);
-    --field-bg: rgba(28,22,16,0.05);
-    --field-border: rgba(28,22,16,0.24);
+    --paper: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1e1c;
+    --ink-soft: #6b6862;
+    --line: #e4e0d6;
+    --muted: #6b6862;
+    --field-bg: #ffffff;
+    --field-border: #e4e0d6;
+    --accent: #2f4a3d;
+    --danger: #7a2e2e;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: 'Heebo', -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background: var(--paper);
     color: var(--ink);
     min-height: 100vh;
@@ -29,11 +34,13 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--ink);
-    padding: 18px 20px 15px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px;
     text-align: center;
   }
-  .page { max-width: 400px; width: 100%; margin: 0 auto; padding: 28px 20px 64px; }
+  .page { max-width: 420px; width: 100%; margin: 0 auto; padding: 16px 16px 64px; }
+  #stepArea { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 18px; }
 
   .title-row {
     display: flex;
@@ -42,24 +49,9 @@
     gap: 10px;
   }
   .venue-logo { display: block; height: 24px; width: auto; }
-  .venue-name {
-    font-family: 'Heebo', sans-serif;
-    font-weight: 900;
-    font-size: 26px;
-    color: var(--paper);
-    margin: 0;
-  }
-  .slash-big {
-    font-weight: 900;
-    font-size: 26px;
-    color: var(--paper);
-  }
-  .venue-tag {
-    color: var(--paper-muted);
-    font-weight: 700;
-    font-size: 13px;
-    white-space: nowrap;
-  }
+  .venue-name { margin: 0; }
+  .slash-big { font-weight: 700; font-size: 22px; color: var(--line); }
+  .venue-tag { color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
 
   .progress {
     display: flex;
@@ -67,12 +59,12 @@
     justify-content: center;
     align-items: baseline;
     gap: 10px;
-    margin: 16px 0 32px;
-    font-size: 11.5px;
+    margin: 4px 0 16px;
+    font-size: 12px;
   }
   .progress:empty { margin: 0; }
   .step-chip { color: var(--muted); }
-  .step-chip.current { color: var(--ink); font-weight: 900; font-size: 17px; }
+  .step-chip.current { color: var(--accent); font-weight: 800; font-size: 16px; }
   button.step-chip.done {
     all: unset;
     color: var(--ink-soft);
@@ -82,7 +74,7 @@
     border-bottom: 1px dashed var(--ink-soft);
     padding-bottom: 1px;
   }
-  .step-sep { color: var(--field-border); font-size: 10px; margin: 0 -3px; }
+  .step-sep { color: #cfc9bd; font-size: 10px; margin: 0 -3px; }
 
   .summary-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 18px; align-items: baseline; }
   .chip-btn {
@@ -95,8 +87,8 @@
   }
   .chip-sep { color: var(--muted); font-size: 12px; }
   .summary-box {
-    border-top: 1px dashed var(--line);
-    border-bottom: 1px dashed var(--line);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
     padding: 14px 0;
     margin: 18px 0 26px;
   }
@@ -110,7 +102,7 @@
     font-size: 14px;
     cursor: pointer;
     color: var(--ink);
-    font-family: 'Heebo', sans-serif;
+    font-family: inherit;
   }
   .summary-label { color: var(--ink-soft); }
   .summary-value { font-weight: 600; }
@@ -141,28 +133,28 @@
     width: 100%;
     background: var(--field-bg);
     border: 1px solid var(--field-border);
-    border-radius: 4px;
+    border-radius: 10px;
     padding: 13px 14px;
     font-size: 17px;
     font-family: inherit;
     color: var(--ink);
   }
-  input::placeholder, textarea::placeholder { color: rgba(28,22,16,0.32); }
-  input:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  input::placeholder, textarea::placeholder { color: #b3ab9c; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
   textarea { resize: none; }
 
   button.primary {
     width: 100%;
     height: 46px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 15.5px;
     font-weight: 600;
-    font-family: 'Heebo', sans-serif;
+    font-family: inherit;
     cursor: pointer;
     margin-top: 8px;
     border: none;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--accent);
+    color: #fff;
   }
   button.primary:disabled { opacity: 0.45; }
   .skip-link {
@@ -185,60 +177,60 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; color: var(--ink); border-radius: 50%; cursor: pointer;
   }
-  .cal-grid button:disabled { color: rgba(28,22,16,0.22); cursor: default; }
-  .cal-grid button.today { border: 1px solid var(--ink-soft); }
-  .cal-grid button.selected { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .cal-grid button:disabled { color: #cfc9bd; cursor: default; }
+  .cal-grid button.today { border: 1px solid var(--accent); }
+  .cal-grid button.selected { background: var(--accent); color: #fff; font-weight: 700; }
 
-  .warning { color: #8a3f22; font-size: 14px; margin-top: 16px; text-align: center; }
+  .warning { color: var(--danger); font-size: 14px; margin-top: 16px; text-align: center; }
 
   /* Time picker */
   .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .time-grid button {
     all: unset; box-sizing: border-box; text-align: center; padding: 13px 0;
-    border: 1px solid var(--field-border); border-radius: 4px;
+    border: 1px solid var(--field-border); border-radius: 10px;
     font-size: 15px; color: var(--ink); cursor: pointer;
   }
-  .time-grid button.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .time-grid button.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* Guests stepper */
   .stepper { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 10px; }
   .stepper button {
     all: unset; width: 46px; height: 46px; border-radius: 50%;
-    border: 1px solid var(--field-border); display: flex; align-items: center; justify-content: center;
-    font-size: 22px; cursor: pointer;
+    border: 1px solid var(--field-border); background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; cursor: pointer; color: var(--accent);
   }
   .stepper-value { font-size: 32px; font-weight: 700; min-width: 50px; text-align: center; }
   .stepper button:disabled { opacity: 0.3; cursor: default; }
   .hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
 
-  .error { color: #8a3f22; font-size: 13px; margin-top: 8px; }
+  .error { color: var(--danger); font-size: 13px; margin-top: 8px; }
 
   .full-msg { text-align: center; padding: 4px 0; }
   .full-msg p:first-child { font-size: 17px; margin-bottom: 8px; }
   .full-msg p:last-child { color: var(--muted); font-size: 14px; }
 
   .success { text-align: center; padding: 8px 0 28px; }
-  .success h2 { font-family: 'Heebo', sans-serif; font-weight: 900; font-size: 24px; margin: 0 0 10px; }
+  .success h2 { font-family: inherit; font-weight: 900; font-size: 24px; margin: 0 0 10px; }
   .success p { font-size: 15px; margin: 4px 0; }
   .card-fallback[hidden] { display: none; }
   .btn-outline {
-    width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 600;
-    font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px;
-    background: transparent; color: var(--ink); border: 1px solid var(--field-border);
+    width: 100%; height: 48px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    font-family: inherit; cursor: pointer; margin-top: 10px;
+    background: #fff; color: var(--ink); border: 1px solid var(--field-border);
   }
   a.btn-outline[hidden] { display: none; }
   a.btn-outline, a.btn-whatsapp { display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
   .card-preview { display: block; width: min(320px, 86%); margin: 0 auto; border-radius: 6px; box-shadow: 0 6px 24px rgba(28,22,16,.18); }
   .card-preview[hidden] { display: none; }
-  .my-bookings { border: 1px solid var(--field-border); border-radius: 8px; padding: 12px 14px 6px; margin: 0 0 24px; }
+  .my-bookings { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 6px; margin: 0 0 22px; }
   .my-title { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin: 0 0 6px; }
   .my-booking { display: flex; justify-content: space-between; align-items: center; min-height: 44px; color: var(--ink);
-    text-decoration: none; font-weight: 600; font-size: 15px; border-top: 1px dashed var(--line); }
+    text-decoration: none; font-weight: 600; font-size: 15px; border-top: 1px solid var(--line); }
   .my-booking:first-of-type { border-top: none; }
   .my-booking span { color: var(--ink-soft); font-weight: 400; font-size: 13px; }
   .btn-whatsapp {
-    width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 700;
-    font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 4px;
+    width: 100%; height: 48px; border-radius: 10px; font-size: 15px; font-weight: 700;
+    font-family: inherit; cursor: pointer; margin-top: 4px;
     background: #2fae60; color: #fff; border: none;
   }
 </style>
@@ -246,7 +238,7 @@
 <body>
 <div class="header-band">
   <div class="title-row">
-    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-white.png" alt="IZAZOO" width="168" height="24"></h1>
+    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-red.png" alt="IZAZOO" width="168" height="24"></h1>
     <span class="slash-big">//</span>
     <span class="venue-tag">הזמנת מקומות</span>
   </div>

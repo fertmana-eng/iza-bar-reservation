@@ -273,11 +273,11 @@ describe('customer booking page',()=>{
 });
 
 describe('IZAZOO logo',()=>{
-  test('the logo replaces the bar name in the booking pages\' header and sits on the tablet screen',async()=>{
+  test('the red logo replaces the bar name in the booking pages\' header and sits on the tablet screen (same look everywhere)',async()=>{
     const logo=page=>page.evaluate(()=>[...document.querySelectorAll('img.venue-logo, img.brand-logo')].filter(i=>i.offsetParent)
       .map(i=>[i.getAttribute('src'),i.alt,i.complete&&i.naturalWidth>0]));
-    for(const [file,src,cfg] of [['','assets/izazoo-logo-white.png',{}],
-      ['booking.html#11111111-2222-4333-8444-555555555555','assets/izazoo-logo-white.png',{bookings:[{access_token:'11111111-2222-4333-8444-555555555555',id:1,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true}]}],
+    for(const [file,src,cfg] of [['','assets/izazoo-logo-red.png',{}],
+      ['booking.html#11111111-2222-4333-8444-555555555555','assets/izazoo-logo-red.png',{bookings:[{access_token:'11111111-2222-4333-8444-555555555555',id:1,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true}]}],
       ['admin.html','assets/izazoo-logo-red.png',{}],['admin.html','assets/izazoo-logo-red.png',{noSession:true}]]){
       const {page,ctx}=await open({file,time:MORNING,cfg});
       await page.waitForFunction(()=>[...document.images].filter(i=>/izazoo-logo/.test(i.src)).every(i=>i.complete));
