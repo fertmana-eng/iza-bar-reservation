@@ -188,7 +188,7 @@ describe('customer booking page',()=>{
     assert.ok((await text(page,'.summary-box')).includes(evil));
     await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
     assert.ok((await page.getAttribute('#cardPreview','alt')).includes(evil));
-    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview)').length].join()),',0');
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview):not(.venue-logo)').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('a wrong phone number is explained before anything is sent',async()=>{
@@ -269,6 +269,22 @@ describe('customer booking page',()=>{
     assert.match(await text(page,'#stepArea'),/מתי מגיעים\?/);
     assert.equal(await page.evaluate(()=>document.querySelector('.cal-grid button.selected')?.dataset.date),'2026-11-25');
     await ctx.close();
+  });
+});
+
+describe('IZAZOO logo',()=>{
+  test('the logo replaces the bar name in the booking pages\' header and sits on the tablet screen',async()=>{
+    const logo=page=>page.evaluate(()=>[...document.querySelectorAll('img.venue-logo, img.brand-logo')].filter(i=>i.offsetParent)
+      .map(i=>[i.getAttribute('src'),i.alt,i.complete&&i.naturalWidth>0]));
+    for(const [file,src,cfg] of [['','assets/izazoo-logo-white.png',{}],
+      ['booking.html#11111111-2222-4333-8444-555555555555','assets/izazoo-logo-white.png',{bookings:[{access_token:'11111111-2222-4333-8444-555555555555',id:1,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true}]}],
+      ['admin.html','assets/izazoo-logo-red.png',{}],['admin.html','assets/izazoo-logo-red.png',{noSession:true}]]){
+      const {page,ctx}=await open({file,time:MORNING,cfg});
+      await page.waitForFunction(()=>[...document.images].filter(i=>/izazoo-logo/.test(i.src)).every(i=>i.complete));
+      assert.deepEqual(await logo(page),[[src,'IZAZOO',true]],file||'index.html');
+      assert.doesNotMatch(await page.evaluate(()=>document.querySelector('.header-band')?.innerText||''),/עיזה בר/);
+      await ctx.close();
+    }
   });
 });
 
@@ -727,7 +743,7 @@ describe('personal booking page (booking.html#secret)',()=>{
   test('names and comments with code are shown as plain text',async()=>{
     const {page,ctx,errors}=await openBooking({customer_name:'<img src=x onerror="window.__pwned=1">',note:'</textarea><img src=x onerror="window.__pwned=2">',can_change:false});
     await page.waitForSelector('.note-view');
-    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview)').length].join()),',0');
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview):not(.venue-logo)').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
 });

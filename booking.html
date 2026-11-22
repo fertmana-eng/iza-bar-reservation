@@ -23,8 +23,9 @@
   html, body { margin: 0; padding: 0; }
   body { font-family: 'Heebo', -apple-system, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
   .header-band { background: var(--ink); padding: 18px 20px 15px; text-align: center; }
-  .title-row { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+  .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .venue-name, .slash-big { font-weight: 900; font-size: 26px; color: var(--paper); margin: 0; }
+  .venue-logo { display: block; height: 24px; width: auto; }
   .venue-tag { color: var(--paper-muted); font-weight: 700; font-size: 13px; white-space: nowrap; }
   .page { max-width: 400px; width: 100%; margin: 0 auto; padding: 24px 20px 64px; }
   .status { text-align: center; font-weight: 700; font-size: 15px; margin: 0 0 16px; }
@@ -67,7 +68,7 @@
 <body>
 <div class="header-band">
   <div class="title-row">
-    <h1 class="venue-name">עיזה בר</h1>
+    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-white.png" alt="IZAZOO" width="168" height="24"></h1>
     <span class="slash-big">//</span>
     <span class="venue-tag">ההזמנה שלי</span>
   </div>
