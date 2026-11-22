@@ -42,6 +42,10 @@ page, so anything the "anon" role can reach, anyone on the internet can reach.
    refuse callers who aren't the logged-in manager, and read the
    notification keys only from the locked `app_secrets` table (never from
    the code; the repository is public).
+   **Edge function `send-reminders`** (automatic reminders, called every 10
+   minutes by the database scheduler, `verify_jwt` off): compare with
+   `supabase/functions/send-reminders/index.ts`; it must refuse any call
+   without the scheduler's secret (`app_secrets` 'cron_secret').
 6. **Page code:** no passwords or keys (other than the publishable key) in the
    pages; anything built from customer text (name, note) is escaped before it
    is shown, especially on the manager page.

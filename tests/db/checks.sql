@@ -77,6 +77,14 @@ begin
      or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='available_spots' and prosrc like '%table_taken%')
      or not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='get_booking' and 'prev_date'=any(proargnames))
     then failed:=failed||'11b not applied: booking functions do not use the shared helpers'::text; end if;
+  -- automatic reminders (14_booking_reminders.sql): the scheduler runs, its secret exists,
+  -- and the list of due bookings is for the server only
+  total:=total+1;
+  if not exists(select 1 from cron.job where jobname='booking-reminders' and active)
+     or not exists(select 1 from public.app_secrets where key='cron_secret')
+     or has_function_privilege('anon','public.due_reminders()','EXECUTE')
+     or has_function_privilege('authenticated','public.due_reminders()','EXECUTE')
+    then failed:=failed||'reminders: scheduler, secret or locked list missing'::text; end if;
   -- the manager's floor actions (13_manager_floor.sql): logged-in manager only
   total:=total+1;
   if has_function_privilege('anon','public.move_booking(bigint,integer)','EXECUTE')

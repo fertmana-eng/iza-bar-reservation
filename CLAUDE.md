@@ -73,6 +73,17 @@ Same owner as the IzaZoo management app (repository
   the sheet, +N′ on the plan) and red at 15 minutes (the bar's rule; the
   panel says the table may be released); the top shows "N מאחרים". Works
   only if staff tap "הגיעו ✓" when guests sit down.
+- **Automatic reminder** (owner, 22 Nov 2026; `14_booking_reminders.sql`,
+  applied via the connector): the personal page also offers "🔔 קבלו תזכורת
+  שעתיים לפני" on confirmed bookings. Every 10 minutes the database's
+  scheduler (pg_cron job `booking-reminders`, via pg_net) calls the edge
+  function `send-reminders` (deployed, `verify_jwt` off; refuses calls
+  without the database-generated secret `app_secrets` 'cron_secret', value
+  never in the repo), which sends one notification to tonight's confirmed
+  bookings arriving in 30 min - 2 h, booked at least 3 hours ahead, not yet
+  arrived, with notifications on (`due_reminders()`, server only), and marks
+  `reminder_sent_at`. Tested: call with the secret answers, without it is
+  refused (401); the due list picks the right bookings.
 - Login (owner's decision, Nov 2026): **one user only, the restaurant**,
   username `izabar`. Supabase logins need an email, so the page turns the
   username into `izabar@izabar.local` (not a real inbox; created by the owner
