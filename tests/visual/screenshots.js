@@ -12,6 +12,8 @@ const toSummary=async p=>{await toDetails(p);await p.fill('#nameInput','דנה �
   await p.click('#detailsForm button[type=submit]');await p.waitForSelector('#submitBtn');};
 const RES=[{id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_name:'רון',phone:'052-1111111',guests:2,note:null,assigned_table_id:1,status:'confirmed'},
   {id:2,reservation_date:'2026-11-22',arrival_time:'18:00:00',customer_name:'מאיה',phone:'054-2222222',guests:3,note:'כיסא תינוק',assigned_table_id:8,status:'confirmed'}];
+const TOK='11111111-2222-4333-8444-555555555555';
+const BK=(x={})=>({access_token:TOK,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...x});
 const STATES=[
  ['intro',async p=>{}],
  ['date',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');}],
@@ -23,6 +25,9 @@ const STATES=[
  ['success',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');}],
  ['success-android',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');},{},undefined,{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36'}],
  ['success-pending',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');},{bookResult:'pending'}],
+ ['booking',async p=>{await p.waitForSelector('#cardPreview:not([hidden])');},{bookings:[BK()]},'booking.html#'+TOK],
+ ['booking-late',async p=>{await p.waitForSelector('#cardPreview:not([hidden])');},{bookings:[BK({can_change:false})]},'booking.html#'+TOK],
+ ['booking-cancelled',async p=>{},{bookings:[BK({status:'cancelled',cancelled_by:'customer',can_change:false,can_cancel:false})]},'booking.html#'+TOK],
  ['admin',async p=>{},{reservations:RES},'admin.html'],
  ['admin-pending',async p=>{},{reservations:[...RES,{id:5,reservation_date:'2026-11-22',arrival_time:'19:30:00',customer_name:'נועה',phone:'052-3333333',guests:4,note:'יום הולדת',assigned_table_id:4,status:'pending'}]},'admin.html'],
  ['admin-empty',async p=>{},{},'admin.html'],

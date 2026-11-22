@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>ההזמנה שלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  /* Same look as the booking page (index.html) */
+  :root {
+    --paper: #f0e8d0;
+    --paper-muted: rgba(240,232,208,0.62);
+    --ink: #1c1610;
+    --ink-soft: #5a4f3c;
+    --line: rgba(28,22,16,0.28);
+    --muted: rgba(28,22,16,0.55);
+    --field-bg: rgba(28,22,16,0.05);
+    --field-border: rgba(28,22,16,0.24);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Heebo', -apple-system, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+  .header-band { background: var(--ink); padding: 18px 20px 15px; text-align: center; }
+  .title-row { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+  .venue-name, .slash-big { font-weight: 900; font-size: 26px; color: var(--paper); margin: 0; }
+  .venue-tag { color: var(--paper-muted); font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .page { max-width: 400px; width: 100%; margin: 0 auto; padding: 24px 20px 64px; }
+  .status { text-align: center; font-weight: 700; font-size: 15px; margin: 0 0 16px; }
+  .status span { display: inline-block; padding: 6px 14px; border-radius: 999px; }
+  .s-confirmed { background: #dcefe2; color: #1d6b3a; }
+  .s-pending { background: #f6e7c4; color: #7a5200; }
+  .s-cancelled, .s-declined { background: rgba(28,22,16,0.1); color: var(--ink-soft); }
+  .card-preview { display: block; width: min(320px, 86%); margin: 0 auto 22px; border-radius: 6px; box-shadow: 0 6px 24px rgba(28,22,16,.18); }
+  .closed-box { text-align: center; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 22px 0; margin-bottom: 22px; }
+  .closed-box h2 { font-weight: 900; font-size: 24px; margin: 0 0 8px; }
+  .closed-box p { margin: 4px 0; color: var(--ink-soft); }
+  label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+  textarea { width: 100%; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 4px; padding: 13px 14px; font-size: 17px; font-family: inherit; color: var(--ink); resize: none; }
+  textarea:focus { outline: none; border-color: var(--ink); }
+  .note-view { background: var(--field-bg); border-radius: 4px; padding: 12px 14px; margin: 0; white-space: pre-wrap; }
+  .field { margin-bottom: 18px; }
+  .btn-outline, .btn-whatsapp, .btn-danger {
+    display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border-radius: 4px;
+    font-size: 15px; font-weight: 600; font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px; text-decoration: none;
+  }
+  .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--field-border); }
+  .btn-whatsapp { background: #2fae60; color: #fff; border: none; font-weight: 700; }
+  .btn-danger { background: transparent; color: #8a3f22; border: 1px solid rgba(138,63,34,.45); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; margin: 14px 0 0; }
+  .msg { font-size: 14px; text-align: center; margin: 10px 0 0; }
+  .msg.err { color: #8a3f22; }
+  .msg.ok { color: #1d6b3a; }
+  .contact { margin-top: 28px; padding-top: 18px; border-top: 1px dashed var(--line); text-align: center; font-size: 14px; color: var(--ink-soft); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="header-band">
+  <div class="title-row">
+    <h1 class="venue-name">עיזה בר</h1>
+    <span class="slash-big">//</span>
+    <span class="venue-tag">ההזמנה שלי</span>
+  </div>
+</div>
+<div class="page" id="page"><p style="text-align:center; color:var(--muted);">טוען...</p></div>
+
+<!-- ================= CONFIGURATION ================= -->
+<script>
+  const SUPABASE_URL = "https://brpovhypzsgwsnuenpfj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_FG6kYV7D4D7iDXYYHGrysw_bJ-ag_0e";
+  const BUSINESS_NAME = "עיזה בר";
+  // The bar can't be reached by phone, only by WhatsApp (or Facebook / Instagram messages)
+  const BAR_WHATSAPP = "972545904470";
+</script>
+<!-- =================================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="card.js"></script>
+<script>
+// A customer's own booking, reached through the private link booking.html#<secret>.
+// The secret sits after '#', so it is never sent to the web host. Everything goes
+// through database functions that act on this one booking only (10_booking_link.sql).
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const page = document.getElementById('page');
+const token = decodeURIComponent(location.hash.slice(1));
+const STATUS = { confirmed: 'ההזמנה אושרה', pending: 'ממתינה לאישור', cancelled: 'ההזמנה בוטלה', declined: 'הבקשה לא אושרה' };
+let booking = null, message = null;
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function shortDate(d) { const [, m, day] = d.split('-').map(Number); return `${day}.${m}`; }
+const barWhatsApp = text => `https://wa.me/${BAR_WHATSAPP}?text=${encodeURIComponent(text)}`;
+const TOKEN_OK = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function load(quiet) {
+  if (!TOKEN_OK.test(token)) return showNotFound();
+  const { data, error } = await db.rpc('get_booking', { p_token: token });
+  if (error) {
+    if (quiet) return;                          // a background refresh keeps what's on screen
+    page.innerHTML = `<p class="msg err">אין חיבור לשרת. בדקו את החיבור ונסו שוב.</p><button type="button" class="btn-outline" id="retry">נסו שוב</button>`;
+    document.getElementById('retry').addEventListener('click', () => load());
+    return;
+  }
+  const b = data && data[0];
+  if (!b) return showNotFound();
+  const changed = !booking || ['status', 'note', 'can_change', 'can_cancel'].some(k => booking[k] !== b[k]);
+  booking = b;
+  // don't redraw under someone typing a comment
+  if (quiet && (!changed || document.activeElement?.id === 'noteInput')) return;
+  render();
+}
+
+function showNotFound() {
+  page.innerHTML = `
+    <div class="closed-box"><h2>ההזמנה לא נמצאה</h2><p>ייתכן שהקישור לא הועתק במלואו.</p></div>
+    <a class="btn-whatsapp" href="${barWhatsApp('שלום, יש לי שאלה לגבי הזמנה')}" target="_blank" rel="noopener">כתבו לנו בוואטסאפ</a>`;
+}
+
+function render() {
+  const b = booking, active = b.status === 'confirmed' || b.status === 'pending';
+  const when = `${shortDate(b.reservation_date)} בשעה ${b.arrival_time.slice(0, 5)}`;
+  page.innerHTML = `
+    <p class="status"><span class="s-${esc(b.status)}" id="statusLabel">${STATUS[b.status] || ''}</span></p>
+    ${active
+      ? `<img class="card-preview" id="cardPreview" alt="${STATUS[b.status]}: ${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים, ${when}" hidden>`
+      : `<div class="closed-box"><h2>${STATUS[b.status]}</h2><p>${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים</p><p>${when}</p></div>`}
+    ${b.can_change ? `
+      <div class="field">
+        <label for="noteInput">הערה להזמנה</label>
+        <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(b.note)}</textarea>
+      </div>
+      <button type="button" class="btn-outline" id="saveNote">שמירת ההערה</button>`
+      : b.note ? `<div class="field"><label>הערה להזמנה</label><p class="note-view">${esc(b.note)}</p></div>` : ''}
+    ${b.can_cancel ? `<button type="button" class="btn-danger" id="cancelBtn">ביטול ההזמנה</button>` : ''}
+    ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
+    ${active && !b.can_change ? `<p class="hint">אפשר לשנות פרטים עד שעה לפני ההגעה. לשינויים כתבו לנו בוואטסאפ.</p>` : ''}
+    <div class="contact">
+      לשאלות ולשינויים אפשר לכתוב לנו
+      <a class="btn-whatsapp" id="barWa" href="${barWhatsApp(`שלום, לגבי ההזמנה שלי (מספר ${b.id}) ל-${when}`)}" target="_blank" rel="noopener">וואטסאפ לעיזה בר</a>
+    </div>`;
+  message = null;
+  if (active) drawCard();
+  document.getElementById('saveNote')?.addEventListener('click', saveNote);
+  document.getElementById('cancelBtn')?.addEventListener('click', cancelBooking);
+}
+
+async function drawCard() {
+  try { await document.fonts.load('900 100px Heebo'); } catch (e) {}
+  const img = document.getElementById('cardPreview');
+  if (!img) return;
+  try {
+    const canvas = document.createElement('canvas');
+    drawBookingCard(canvas, { business: BUSINESS_NAME, name: booking.customer_name, guests: booking.guests,
+      time: booking.arrival_time.slice(0, 5), date: booking.reservation_date, bookingId: booking.id, pending: booking.status === 'pending' });
+    img.src = canvas.toDataURL('image/png'); img.hidden = false;
+  } catch (e) { /* the status line and buttons are enough without the picture */ }
+}
+
+async function saveNote() {
+  const btn = document.getElementById('saveNote');
+  btn.disabled = true; btn.textContent = 'שומר...';
+  const { data, error } = await db.rpc('update_booking_note', { p_token: token, p_note: document.getElementById('noteInput').value });
+  message = error ? { text: 'ההערה לא נשמרה. בדקו את החיבור ונסו שוב.' }
+    : data === 'saved' ? { ok: true, text: 'ההערה נשמרה.' }
+    : data === 'locked' ? { text: 'כבר אי אפשר לשנות את ההזמנה. כתבו לנו בוואטסאפ.' }
+    : { text: 'ההערה לא נשמרה.' };
+  booking = null;                       // force a redraw with the latest data
+  await load();
+}
+
+async function cancelBooking() {
+  if (!confirm('לבטל את ההזמנה? השולחן ישתחרר.')) return;
+  const btn = document.getElementById('cancelBtn');
+  btn.disabled = true; btn.textContent = 'מבטל...';
+  const { data, error } = await db.rpc('cancel_booking', { p_token: token });
+  message = error ? { text: 'הביטול לא נשמר. בדקו את החיבור ונסו שוב.' }
+    : data === 'cancelled' ? { ok: true, text: 'ההזמנה בוטלה. נשמח לראות אתכם בפעם אחרת!' }
+    : { text: 'אי אפשר לבטל את ההזמנה הזו. כתבו לנו בוואטסאפ.' };
+  booking = null;
+  await load();
+}
+
+// the status changes when the bar answers: check every 30 seconds while the page is open
+setInterval(() => { if (document.visibilityState === 'visible') load(true); }, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(true); });
+window.addEventListener('hashchange', () => location.reload());
+load();
+</script>
+</body>
+</html>

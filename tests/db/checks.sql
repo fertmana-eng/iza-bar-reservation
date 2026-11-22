@@ -13,7 +13,7 @@
 do $checks$
 declare
   d date := current_date + 7;
-  r record; n int; ok boolean; ok_list text; total int := 0; failed text[] := '{}';
+  r record; n int; ok boolean; ok_list text; tok uuid; total int := 0; failed text[] := '{}';
 begin
   -- ---------- structure ----------
   total:=total+1;
@@ -41,7 +41,7 @@ begin
   -- functions the booking page needs are callable by the public; nothing else is
   for r in select p.oid, p.proname from pg_proc p where p.pronamespace='public'::regnamespace loop
     total:=total+1;
-    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability'))
+    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability','get_booking','cancel_booking','update_booking_note'))
       then failed:=failed||(r.proname||': wrong public access'); end if;
   end loop;
 
@@ -104,6 +104,20 @@ begin
     union all select (public.book_reservation(d,'18:00','x','abc',2,null,null)).result
     union all select (public.book_reservation(d,'18:00','x','050-0000000',2,null,'nope')).result) b;
   if ok_list<>'invalid,invalid,invalid,invalid,invalid' then failed:=failed||('bad input not refused: '||ok_list); end if;
+  -- the personal booking link (10_booking_link.sql): only with the right secret
+  total:=total+1;
+  select b.booking_token into tok from public.book_reservation(d,'19:30','בדיקת קישור','050-0000000',2,null,null) b;
+  if tok is null then failed:=failed||'a new booking has no secret link'::text;
+  else
+    select count(*) into n from public.get_booking(tok);
+    if n<>1 then failed:=failed||'the link does not find its booking'::text; end if;
+    select count(*) into n from public.get_booking(gen_random_uuid());
+    if n<>0 then failed:=failed||'a wrong secret finds a booking'::text; end if;
+    if public.update_booking_note(gen_random_uuid(),'x')<>'not_found' or public.cancel_booking(gen_random_uuid())<>'not_found'
+      then failed:=failed||'a wrong secret can change a booking'::text; end if;
+    if public.update_booking_note(tok,'הערה')<>'saved' then failed:=failed||'the link cannot save a comment'::text; end if;
+    if public.cancel_booking(tok)<>'cancelled' then failed:=failed||'the link cannot cancel'::text; end if;
+  end if;
   total:=total+1;
   if public.available_spots(d) is null or public.check_availability(d,2) is null then failed:=failed||'availability functions fail for the public'::text; end if;
 

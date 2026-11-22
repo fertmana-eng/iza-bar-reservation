@@ -44,6 +44,8 @@ Same owner as the IzaZoo management app (repository
   confirmed at once. Settings: `booking_cutoff` 20:00 (public), `approval_from`
   16:00 (private, read only by the function). The customer's card says "הבקשה
   התקבלה · ממתינה לאישור" and has no "add to calendar".
+- `booking.html#<secret>`: the customer's own booking (see Next steps).
+  `card.js` draws the booking card for both customer pages.
 - `admin.html`: the manager page: login first, then the bookings of a chosen
   day: "ממתינות לאישור" first (אישור / דחייה: saves the answer and opens
   WhatsApp to the customer's number with a ready message; the manager presses
@@ -120,16 +122,21 @@ Same owner as the IzaZoo management app (repository
 1. `09_approval_window.sql` run by the owner (22 Nov 2026);
    `tests/db/checks.sql`: ALL 25 PASSED. The owner will test a request
    between 16:00 and 20:00 and approve/decline it on the manager page later.
-2. **Personal booking link** (owner wants customer accounts with history,
-   notifications, changes and status; agreed to start with step 1, a private
-   link per booking, no sign-in): plan in `docs/plan-booking-link.md`,
-   waiting for the owner's OK and two answers (bar phone number; cancel
-   deadline). Step 2 later: optional accounts (e.g. Google sign-in) for
-   history. Reminders from that talk: customer sign-in would change the
-   database's "logged in = manager" rule (must become an explicit manager
-   role); SMS sign-in costs money per message; Apple sign-in needs a paid
-   developer account; iPhone web notifications only work from the home
-   screen.
+2. **Personal booking link** (plan approved: `docs/plan-booking-link.md`).
+   Step 1 built: `booking.html#<secret>` shows the card, live status
+   (checks every 30 s), comment editing until 1 hour before arrival, cancel
+   any time (marked `cancelled_by='customer'`), WhatsApp to the bar
+   (054-5904470; the bar can't be reached by phone). "ניהול ההזמנה" button on
+   the confirmation screen. Database: `10_booking_link.sql` part A applied
+   via the connector; part B (`10b_book_reservation_token.sql`, returns the
+   secret) given to the owner. Next: step 2 (change time/guests/date,
+   approval rules, revert on decline, manager page shows changes and
+   customer cancellations), step 3 (link in both WhatsApp messages), step 4
+   (Android notifications). Step 2 of accounts (optional sign-in, history)
+   later. Reminders: customer sign-in would change the database's "logged in
+   = manager" rule (must become an explicit manager role); SMS sign-in costs
+   money per message; Apple sign-in needs a paid developer account; iPhone
+   web notifications only work from the home screen.
 3. The manager page runs on a tablet with the restaurant's WhatsApp (owner,
    Nov 2026), so approval messages go out from the restaurant's number.
 
@@ -175,7 +182,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (39 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (49 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero

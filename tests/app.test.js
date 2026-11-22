@@ -115,6 +115,15 @@ describe('customer booking page',()=>{
     await fillBooking(page);await page.click('#submitBtn');await page.waitForTimeout(200);
     assert.match(await text(page,'#submitError'),/השעה שבחרתם כבר לא זמינה/);await ctx.close();
   });
+  test('the confirmation screen links to the personal booking page',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
+    assert.equal(await page.getAttribute('#manageLink','href'),'booking.html#11111111-2222-4333-8444-555555555555');
+    await ctx.close();
+    const second=await open({time:MORNING,cfg:{token:null}});      // a database without the link yet: no button
+    await fillBooking(second.page);await second.page.click('#submitBtn');await second.page.waitForSelector('.success');
+    assert.equal(await second.page.isVisible('#manageLink'),false);await second.ctx.close();
+  });
   test('there is no email field (owner decided against emails)',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await fillBooking(page);
@@ -374,5 +383,82 @@ describe('manager page',()=>{
     await page.click('.cancel-link[data-id="1"]');await page.waitForTimeout(200);
     assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),'confirmed');
     await ctx.close();
+  });
+});
+
+describe('personal booking page (booking.html#secret)',()=>{
+  const TOKEN='11111111-2222-4333-8444-555555555555';
+  const bk=(extra={})=>({access_token:TOKEN,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',
+    customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...extra});
+  const openBooking=(extra,opts={})=>open({file:'booking.html#'+(opts.token||TOKEN),time:MORNING,cfg:{bookings:[bk(extra)]},...opts});
+  const BAR_WA='https://wa.me/972545904470';
+
+  test('shows the booking card, its status and the comment',async()=>{
+    const {page,ctx,errors}=await openBooking();
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.equal(await text(page,'#statusLabel'),'ההזמנה אושרה');
+    assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, שולחן ל-3 סועדים, 25.11 בשעה 19:00');
+    assert.equal(await page.inputValue('#noteInput'),'יום הולדת');
+    assert.ok((await page.getAttribute('#barWa','href')).startsWith(BAR_WA+'?text='));
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('a request waiting for approval says so',async()=>{
+    const {page,ctx}=await openBooking({status:'pending'});
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.equal(await text(page,'#statusLabel'),'ממתינה לאישור');await ctx.close();
+  });
+  test('the comment can be changed and saved',async()=>{
+    const {page,ctx}=await openBooking();
+    await page.fill('#noteInput','כיסא תינוק');await page.click('#saveNote');
+    await page.waitForSelector('#msg');
+    assert.match(await text(page,'#msg'),/ההערה נשמרה/);
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='update_booking_note').map(o=>o.args)),[{p_token:TOKEN,p_note:'כיסא תינוק'}]);
+    assert.equal(await page.inputValue('#noteInput'),'כיסא תינוק');await ctx.close();
+  });
+  test('cancelling asks first; yes cancels, no keeps the booking',async()=>{
+    for(const [dismiss,status] of [[true,'confirmed'],[false,'cancelled']]){
+      const {page,ctx,dialogs}=await openBooking({},{dismissDialogs:dismiss});
+      await page.waitForSelector('#cancelBtn');await page.click('#cancelBtn');await page.waitForTimeout(300);
+      assert.deepEqual(dialogs,['לבטל את ההזמנה? השולחן ישתחרר.']);
+      assert.equal(await page.evaluate(()=>__db.bookings[0].status),status);
+      if(!dismiss){
+        assert.match(await text(page,'.page'),/ההזמנה בוטלה.*נשמח לראות אתכם בפעם אחרת/);
+        assert.equal(await page.isVisible('#cancelBtn'),false);assert.equal(await page.isVisible('#noteInput'),false);
+      }
+      await ctx.close();
+    }
+  });
+  test('less than an hour before arrival, changes are closed but cancelling still works',async()=>{
+    const {page,ctx}=await openBooking({can_change:false});
+    await page.waitForSelector('#cancelBtn');
+    assert.equal(await page.isVisible('#noteInput'),false);
+    assert.match(await text(page,'.note-view'),/יום הולדת/);
+    assert.match(await text(page,'.page'),/אפשר לשנות פרטים עד שעה לפני ההגעה\. לשינויים כתבו לנו בוואטסאפ/);await ctx.close();
+  });
+  test('a declined request shows a clear message and no buttons to change it',async()=>{
+    const {page,ctx}=await openBooking({status:'declined',can_change:false,can_cancel:false});
+    await page.waitForSelector('.closed-box');
+    assert.match(await text(page,'.closed-box'),/הבקשה לא אושרה דנה כהן, שולחן ל-3 סועדים 25\.11 בשעה 19:00/);
+    assert.equal(await page.isVisible('#cancelBtn'),false);assert.equal(await page.isVisible('#cardPreview'),false);await ctx.close();
+  });
+  test('a wrong or broken link shows "not found" and asks nothing of the database for nonsense',async()=>{
+    const wrong=await openBooking({},{token:'99999999-2222-4333-8444-555555555555'});
+    assert.match(await text(wrong.page,'.page'),/ההזמנה לא נמצאה/);await wrong.ctx.close();
+    const broken=await openBooking({},{token:'abc'});
+    assert.match(await text(broken.page,'.page'),/ההזמנה לא נמצאה/);
+    assert.deepEqual(await broken.page.evaluate(()=>__ops.filter(o=>o.rpc)),[]);await broken.ctx.close();
+  });
+  test('the status updates by itself when the bar answers',async()=>{
+    const {page,ctx}=await openBooking({status:'pending'});
+    await page.waitForSelector('#statusLabel');
+    await page.evaluate(()=>{__db.bookings[0].status='confirmed';document.dispatchEvent(new Event('visibilitychange'));});
+    await page.waitForFunction(()=>document.getElementById('statusLabel').textContent==='ההזמנה אושרה',null,{timeout:10000});
+    await ctx.close();
+  });
+  test('names and comments with code are shown as plain text',async()=>{
+    const {page,ctx,errors}=await openBooking({customer_name:'<img src=x onerror="window.__pwned=1">',note:'</textarea><img src=x onerror="window.__pwned=2">',can_change:false});
+    await page.waitForSelector('.note-view');
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview)').length].join()),',0');
+    assert.deepEqual(errors,[]);await ctx.close();
   });
 });
