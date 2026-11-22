@@ -274,14 +274,13 @@ let viewMonth, minDate, maxDate;
 let dateWarning = null;
 let guestsWarning = null;
 
-const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '', email: '' };
+const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '' };
 
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
 // own numbers (never toISOString, which shifts to UTC and moved every day back).
-// The same limits the database checks (supabase/migrations/08_booking_limits.sql)
+// The same phone rule the database checks (supabase/migrations/08_booking_limits.sql)
 const PHONE_OK = /^[0-9+() -]{7,20}$/;
-const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function israelNow() {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
@@ -644,10 +643,6 @@ function renderExtraStep() {
       <label for="noteInput">הערה (לא חובה)</label>
       <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
     </div>
-    <div class="field">
-      <label for="emailInput">אימייל לאישור (לא חובה)</label>
-      <input id="emailInput" type="email" placeholder="name@example.com" maxlength="120" value="${esc(formData.email)}">
-    </div>
     <div id="submitError" class="error" style="display:none;"></div>
     <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
   `;
@@ -657,13 +652,6 @@ function renderExtraStep() {
 
 async function submitBooking() {
   formData.note = document.getElementById('noteInput').value.trim();
-  formData.email = document.getElementById('emailInput').value.trim();
-  if (formData.email && !EMAIL_OK.test(formData.email)) {
-    const errEl = document.getElementById('submitError');
-    errEl.textContent = 'כתובת האימייל לא תקינה. אפשר גם להשאיר את השדה ריק.';
-    errEl.style.display = 'block';
-    return;
-  }
 
   const btn = document.getElementById('submitBtn');
   const errEl = document.getElementById('submitError');
@@ -677,8 +665,7 @@ async function submitBooking() {
     p_name: formData.name,
     p_phone: formData.phone,
     p_guests: formData.guests,
-    p_note: formData.note || null,
-    p_email: formData.email || null
+    p_note: formData.note || null
   });
 
   if (error || !data || !data[0]) {
@@ -693,11 +680,6 @@ async function submitBooking() {
   const result = data[0].result;
 
   if (result === 'confirmed') {
-    if (formData.email) {
-      db.functions.invoke('send-confirmation', {
-        body: { email: formData.email, name: formData.name, date: formData.date, time: formData.time, guests: formData.guests }
-      }).catch(() => {});
-    }
     const waText = encodeURIComponent(
       `אישור הזמנה - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
     );

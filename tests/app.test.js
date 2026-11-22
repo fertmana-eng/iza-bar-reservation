@@ -43,20 +43,17 @@ describe('customer booking page',()=>{
     await page.fill('#noteInput','יום הולדת');
     await page.click('#submitBtn');await page.waitForSelector('.success');
     const [call]=await rpcCalls(page,'book_reservation');
-    assert.deepEqual(call.args,{p_date:'2026-11-25',p_time:'17:15',p_name:'דנה כהן',p_phone:'050-1234567',p_guests:3,p_note:'יום הולדת',p_email:null});
+    assert.deepEqual(call.args,{p_date:'2026-11-25',p_time:'17:15',p_name:'דנה כהן',p_phone:'050-1234567',p_guests:3,p_note:'יום הולדת'});
     assert.match(await text(page,'.success'),/ההזמנה אושרה.*דנה כהן, שולחן ל-3 סועדים.*25\.11 בשעה 17:15/);
     assert.ok(await page.isVisible('.btn-whatsapp'));assert.ok(await page.isVisible('#icsBtn'));
-    assert.equal((await page.evaluate(()=>__ops.filter(o=>o.fn))).length,0,'no email without an address');
+    assert.equal((await page.evaluate(()=>__ops.filter(o=>o.fn))).length,0,'no email is requested');
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  test('with an email address, a confirmation email is requested',async()=>{
+  test('there is no email field (owner decided against emails)',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await fillBooking(page);
-    await page.fill('#emailInput','dana@example.com');
-    await page.click('#submitBtn');await page.waitForSelector('.success');
-    const fns=await page.evaluate(()=>__ops.filter(o=>o.fn));
-    assert.deepEqual(fns,[{fn:'send-confirmation',body:{email:'dana@example.com',name:'דנה כהן',date:'2026-11-25',time:'17:15',guests:3}}]);
-    await ctx.close();
+    assert.equal(await page.isVisible('#emailInput'),false);
+    assert.doesNotMatch(await text(page,'#stepArea'),/אימייל/);await ctx.close();
   });
   test('"add to calendar" on Android opens Google Calendar with the booking filled in',async()=>{
     const {page,ctx}=await open({time:MORNING,userAgent:'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36'});
@@ -101,7 +98,7 @@ describe('customer booking page',()=>{
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  test('a wrong phone number or email is explained before anything is sent',async()=>{
+  test('a wrong phone number is explained before anything is sent',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');
     await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');
@@ -110,10 +107,7 @@ describe('customer booking page',()=>{
     await page.click('#detailsForm button[type=submit]');
     assert.match(await text(page,'#detailsError'),/מספר הטלפון לא תקין/);
     await page.fill('#phoneInput','+972 50-123-4567');await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
-    await page.fill('#emailInput','dana@');await page.click('#submitBtn');
-    assert.match(await text(page,'#submitError'),/כתובת האימייל לא תקינה/);
-    assert.equal((await rpcCalls(page,'book_reservation')).length,0);
-    await page.fill('#emailInput','');await page.click('#submitBtn');await page.waitForSelector('.success');
+    await page.click('#submitBtn');await page.waitForSelector('.success');
     await ctx.close();
   });
   test('if the database refuses the details, the customer is told to check them',async()=>{

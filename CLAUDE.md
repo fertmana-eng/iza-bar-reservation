@@ -30,7 +30,7 @@ Same owner as the IzaZoo management app (repository
 - `index.html`: the public booking page (the link sent to customers). Steps:
   welcome text → date (up to 30 days ahead) → number of guests (1–10) →
   arrival time (17:00–21:00, 15-minute steps) → name and phone → summary with
-  optional note and email → confirmation with "send to my WhatsApp" and "add
+  optional note → confirmation with "send to my WhatsApp" and "add
   to calendar". Same-day online booking closes at 17:00. Outdoor seating can't
   be booked (walk-in only), as the welcome text says.
 - `admin.html`: the manager page: login first, then the bookings of a chosen
@@ -48,7 +48,10 @@ Same owner as the IzaZoo management app (repository
   free table; if none fits, the bar if it has room; otherwise "full". **A table
   is booked for the whole evening** (one booking per table per date); confirm
   with the owner whether that is intended.
-- Optional confirmation email: edge function `send-confirmation` using Resend.
+- **No confirmation emails** (owner's decision, Nov 2026): the email field,
+  the never-deployed `send-confirmation` function and its setup notes were
+  removed. The database still has the `email` column and `book_reservation`'s
+  optional `p_email` (harmless; the page no longer sends it).
 - Backend: its own Supabase project, separate from IzaZoo: "IZA Bar
   reservation", id `brpovhypzsgwsnuenpfj` (free plan; it pauses after
   inactivity; restored 22 Nov 2026 with the owner's OK; database time zone
@@ -66,7 +69,7 @@ Same owner as the IzaZoo management app (repository
   layout shows no delete button on the phone or in desktop view, so it was
   left for now. Harmless; delete it some time from a computer (or remove
   Netlify's access to this repository in GitHub → Settings → Applications).
-- Database changes and the edge function are kept in `supabase/`. The four
+- Database changes are kept in `supabase/migrations/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
 
@@ -83,21 +86,14 @@ Same owner as the IzaZoo management app (repository
    linked to the day before it (tapping 26 booked the 25th).
 4. ~~Customer text inserted as HTML~~: fixed 22 Nov 2026. Everything a
    customer types goes through `esc()` on both pages and in the email code.
-5. **Confirmation emails are not sent at all**: the `send-confirmation` edge
-   function was never deployed (the project has no edge functions), so the
-   page's call fails silently while the customer sees "booking confirmed".
-   Ask the owner whether they want emails (needs a Resend account and,
-   to send from the bar's own address, a domain). If yes, don't deploy the
-   current version as is: anyone can call it with any address, so it could
-   be used to send emails through the owner's account. Send the email from
-   the booking itself instead (look up the booking; only to its address).
-6. **Function limits** (`08_booking_limits.sql`, given to the owner to run;
+5. ~~Confirmation emails never sent~~: emails dropped by the owner; removed.
+6. ~~Function limits~~ (`08_booking_limits.sql`, run by the owner;
    it replaces `book_reservation` and deletes a row, so the connector can't):
    guests 1–10, date today to +30 days, name 1–80, phone 7–20 of digits
    `+ - ( )` and spaces, note ≤300, email ≤120 and address-shaped, else
    `'invalid'`; fixed `search_path` on all three functions. The page checks
-   the same phone/email rules and has matching `maxlength`s. Dry-run on the
-   real database passed. After it runs: `tests/db/checks.sql` must pass.
+   the same phone rule and has matching `maxlength`s. Run by the owner
+   22 Nov 2026; `tests/db/checks.sql`: ALL 23 PASSED.
 7. The unused `admin_password_hash` setting: removed by `08_booking_limits.sql`.
 8. ~~"הוספה ליומן" on Android~~: fixed 22 Nov 2026. Android opens Google
    Calendar with the booking filled in (Chrome on Android can't open a
@@ -108,12 +104,15 @@ Same owner as the IzaZoo management app (repository
 
 ## Next steps (in order)
 
-1. Owner runs `08_booking_limits.sql`; then run `tests/db/checks.sql`.
-2. Ask the owner about emails (5). Note: Supabase gives
-   anon and authenticated full permissions on any NEW table by default; set
-   the grants explicitly whenever a table is added (06_manager_login.sql
-   did this for the existing three).
-3. Then new features with the owner (use a short planning interview first).
+1. WhatsApp confirmation as a file instead of text (owner's wish, Nov 2026).
+   A web page can't attach a file to a wa.me link and can't send from the
+   bar's WhatsApp (that needs the paid WhatsApp Business API). Proposed: a
+   "share" button (Web Share API with a file) that opens the phone's share
+   sheet; the customer picks WhatsApp. Recommended format: a picture of a
+   booking card (Hebrew renders natively, shows inline in WhatsApp) rather
+   than a PDF (needs a PDF library with an embedded Hebrew font). Waiting for
+   the owner's choice.
+2. New features with the owner (use a short planning interview first).
 
 ## How we make changes (always)
 
@@ -187,7 +186,9 @@ with a fixed clock in Israel time.
   calendar's day numbers now book the right date.
 - Nov 2026: "add to calendar" opens Google Calendar on Android; complete
   calendar file elsewhere.
-- Nov 2026: customer text escaped on both pages and in the email code.
+- Nov 2026: customer text escaped on both pages.
+- Nov 2026: limits inside the database (08) and matching checks on the page;
+  email option removed (owner's decision).
 - Nov 2026 (experiment, not part of this site): a 3D model of the bar from an
   old architect's plan, with tappable seats, as a private claude.ai artifact
   ("עיזה בר – בחירת מקומות", https://claude.ai/artifact/XodKCTKkfWuZLcSuZokYxM;

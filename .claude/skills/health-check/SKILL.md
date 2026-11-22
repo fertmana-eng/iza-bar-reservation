@@ -17,7 +17,7 @@ reports; fix things afterwards as normal changes (one pull request each, with
 3. **Security:** run the security check (`.claude/skills/security-check/SKILL.md`).
 4. **Size and shape:** note the sizes of `index.html` and `admin.html` and
    compare with the last health check in CLAUDE.md.
-5. **Out of step:** the deployed database and edge function match
+5. **Out of step:** the database matches
    `supabase/`; `CLAUDE.md` describes the project as it is now.
 6. **Report** to the owner in a short list: healthy / needs attention, with a
    proposed fix for each item, smallest first. Then record the date and sizes
