@@ -9,6 +9,9 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const BUSINESS_NAME = Deno.env.get("BUSINESS_NAME") || "המסעדה";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "onboarding@resend.dev";
 
+// Customer text goes into the email's HTML: escape it so it can't become code or links.
+const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -26,12 +29,12 @@ serve(async (req) => {
     const html = `
       <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
         <h2>ההזמנה שלך אושרה</h2>
-        <p>שלום ${name},</p>
+        <p>שלום ${esc(name)},</p>
         <p>ההזמנה שלך ל-${BUSINESS_NAME} אושרה:</p>
         <ul>
           <li>תאריך: ${dateDisplay}</li>
-          <li>שעה: ${time}</li>
-          <li>מספר סועדים: ${guests}</li>
+          <li>שעה: ${esc(time)}</li>
+          <li>מספר סועדים: ${esc(guests)}</li>
         </ul>
         <p>מצפים לראותכם!</p>
       </div>

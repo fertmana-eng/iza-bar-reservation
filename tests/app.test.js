@@ -83,6 +83,24 @@ describe('customer booking page',()=>{
     assert.equal(await page.evaluate(()=>israelToUtc('20260610T170000')),'20260610T140000Z');
     await ctx.close();
   });
+  test('a name or note containing code is shown as plain text, never run',async()=>{
+    const {page,ctx,errors}=await open({time:MORNING});
+    const evil='"><img src=x onerror="window.__pwned=1">';
+    await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');
+    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');
+    await page.waitForSelector('#timeNext');await page.click('#timeNext');
+    await page.fill('#nameInput',evil);await page.fill('#phoneInput','050-1234567');
+    await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
+    await page.fill('#noteInput','</textarea><img src=x onerror="window.__pwned=2">');
+    await page.click('.summary-row[data-step="3"]');                 // back to the details step and forward again
+    assert.equal(await page.inputValue('#nameInput'),evil);
+    await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
+    assert.ok((await text(page,'.summary-box')).includes(evil));
+    await page.click('#submitBtn');await page.waitForSelector('.success');await page.waitForTimeout(200);
+    assert.ok((await text(page,'.success')).includes(evil));
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img').length].join()),',0');
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
   test('a date with no free places shows a message and stays on the calendar',async()=>{
     const {page,ctx}=await open({time:MORNING,cfg:{spots:0}});
     await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');
@@ -207,6 +225,15 @@ describe('manager page',()=>{
     assert.deepEqual(dialogs,['לבטל את ההזמנה הזו?']);
     assert.equal(await page.evaluate(()=>__db.reservations.find(r=>r.id===1).status),'cancelled');
     await ctx.close();
+  });
+  test('a booking whose name or note contains code is shown as plain text, never run',async()=>{
+    const evil=[{id:9,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'<img src=x onerror="window.__pwned=1">',
+      phone:'<b>050</b>',guests:2,note:'<script>window.__pwned=2</script>',assigned_table_id:1,assigned_kind:'table',status:'confirmed'}];
+    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,cfg:{reservations:evil}});
+    const t=await text(page,'#listContent');
+    assert.ok(t.includes('<img src=x onerror="window.__pwned=1">')&&t.includes('<script>window.__pwned=2</script>')&&t.includes('<b>050</b>'));
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('#listContent img,#listContent script,#listContent b').length].join()),',0');
+    assert.deepEqual(errors,[]);await ctx.close();
   });
   test('if the bookings cannot be loaded, a message and a retry button are shown',async()=>{
     const {page,ctx}=await open({file:'admin.html',time:MORNING,cfg:{reservations,failTables:['reservations']}});
