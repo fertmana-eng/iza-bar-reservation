@@ -225,7 +225,9 @@
     font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px;
     background: transparent; color: var(--ink); border: 1px solid var(--field-border);
   }
-  a.btn-outline { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+  a.btn-outline, a.btn-whatsapp { display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
+  .card-preview { display: block; width: min(260px, 70%); margin: 22px auto 0; border-radius: 6px; box-shadow: 0 6px 24px rgba(28,22,16,.18); }
+  .card-preview[hidden] { display: none; }
   .btn-whatsapp {
     width: 100%; height: 48px; border-radius: 4px; font-size: 15px; font-weight: 700;
     font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 4px;
@@ -680,6 +682,7 @@ async function submitBooking() {
   const result = data[0].result;
 
   if (result === 'confirmed') {
+    formData.bookingId = data[0].reservation_id;
     const waText = encodeURIComponent(
       `אישור הזמנה - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
     );
@@ -691,14 +694,14 @@ async function submitBooking() {
         <p>${formatDisplay(formData.date)} בשעה ${formData.time}</p>
         <p class="muted">מצפים לראותכם ✳</p>
       </div>
-      <a href="https://wa.me/?text=${waText}" target="_blank" style="text-decoration:none; display:block;">
-        <button type="button" class="btn-whatsapp">שליחה לוואטסאפ שלי</button>
-      </a>
+      <a class="btn-whatsapp" id="waLink" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">שליחה לוואטסאפ שלי</a>
       ${IS_ANDROID
         ? `<a class="btn-outline" id="calLink" href="${googleCalendarUrl()}" target="_blank" rel="noopener">הוספה ליומן</a>`
         : `<button type="button" class="btn-outline" id="icsBtn">הוספה ליומן</button>`}
+      <img class="card-preview" id="cardPreview" alt="כרטיס אישור ההזמנה" hidden>
     `;
     if (!IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
+    prepareCard();
   } else if (result === 'full') {
     stepIndex = 0;
     dateWarning = 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.';
@@ -715,6 +718,62 @@ async function submitBooking() {
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';
   }
+}
+
+// WhatsApp confirmation as a picture (owner's choice, Nov 2026). A web page can't
+// attach a file to a WhatsApp link or send from the bar's WhatsApp, so the button
+// opens the phone's share sheet with the picture; the customer picks WhatsApp.
+// Where sharing files isn't possible (most computers) the link sends the text as before.
+const CARD_W = 1080, CARD_H = 1350;
+function drawBookingCard(canvas, b) {
+  canvas.width = CARD_W; canvas.height = CARD_H;
+  const c = canvas.getContext('2d'), ink = '#1c1610', paper = '#f0e8d0', soft = '#5a4f3c', mid = CARD_W / 2;
+  const text = (t, y, size, weight, color, maxW = 960) => {
+    let s = size; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`;
+    while (c.measureText(t).width > maxW && s > 20) { s -= 2; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`; }
+    c.fillStyle = color; c.fillText(t, mid, y);
+  };
+  const dashed = y => { c.save(); c.setLineDash([14, 12]); c.strokeStyle = 'rgba(28,22,16,.35)'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(80, y); c.lineTo(CARD_W - 80, y); c.stroke(); c.restore(); };
+  c.direction = 'rtl'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  c.fillStyle = paper; c.fillRect(0, 0, CARD_W, CARD_H);
+  c.fillStyle = ink; c.fillRect(0, 0, CARD_W, 270);
+  text(b.business + ' //', 160, 120, 900, paper);
+  text('הזמנת מקומות', 225, 40, 700, 'rgba(240,232,208,.65)');
+  text('ההזמנה אושרה', 380, 68, 900, ink);
+  text(b.name, 465, 54, 600, soft);
+  dashed(530);
+  text(b.weekday + ' · ' + b.dateShort, 650, 70, 800, ink);
+  text(b.time, 850, 190, 900, ink);
+  text(`שולחן ל-${b.guests} סועדים`, 950, 58, 600, ink);
+  dashed(1020);
+  text('נחכה עד 15 דקות משעת ההזמנה', 1100, 38, 400, soft);
+  text('מצפים לראותכם ✳', 1160, 38, 400, soft);
+  if (b.bookingId) text('מספר הזמנה ' + b.bookingId, 1285, 32, 400, soft);
+}
+function cardData() {
+  return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId,
+    dateShort: formatDisplay(formData.date),
+    weekday: fromDateStr(formData.date).toLocaleDateString('he-IL', { weekday: 'long' }) };
+}
+let cardFile = null;
+async function prepareCard() {
+  cardFile = null;
+  try { await document.fonts.load('900 100px Heebo'); } catch (e) {}
+  const canvas = document.createElement('canvas');
+  drawBookingCard(canvas, cardData());
+  const preview = document.getElementById('cardPreview');
+  if (preview) { preview.src = canvas.toDataURL('image/png'); preview.hidden = false; }
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  if (!blob) return;
+  const file = new File([blob], 'izabar-booking.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) cardFile = file;
+  const wa = document.getElementById('waLink');
+  if (wa) wa.addEventListener('click', e => {
+    if (!cardFile) return;                      // no file sharing here: the link sends the text instead
+    e.preventDefault();
+    navigator.share({ files: [cardFile] }).catch(() => {});   // closing the share sheet is not an error
+  });
 }
 
 // "Add to calendar". Android's Chrome can't open a calendar file straight into

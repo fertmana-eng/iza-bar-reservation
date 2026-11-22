@@ -49,6 +49,28 @@ describe('customer booking page',()=>{
     assert.equal((await page.evaluate(()=>__ops.filter(o=>o.fn))).length,0,'no email is requested');
     assert.deepEqual(errors,[]);await ctx.close();
   });
+  // a phone that can share files: record what would go to the share sheet
+  const fakeShare=()=>{window.__shared=[];navigator.canShare=d=>!!(d&&d.files);
+    navigator.share=async d=>{window.__shared.push((d.files||[]).map(f=>f.name+'|'+f.type+'|'+(f.size>10000)));};};
+  test('on a phone, the WhatsApp button shares a picture of the booking',async()=>{
+    const {page,ctx,errors}=await open({time:MORNING,init:fakeShare});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.deepEqual(await page.evaluate(()=>{const i=document.getElementById('cardPreview');return [i.naturalWidth,i.naturalHeight];}),[1080,1350]);
+    const pages=ctx.pages().length;
+    await page.click('#waLink');await page.waitForTimeout(300);
+    assert.deepEqual(await page.evaluate(()=>window.__shared),[['izabar-booking.png|image/png|true']]);
+    assert.equal(ctx.pages().length,pages,'no WhatsApp text link opened');
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('where pictures cannot be shared, the WhatsApp button sends the text as before',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
+    const href=await page.getAttribute('#waLink','href');
+    assert.ok(href.startsWith('https://wa.me/?text='));
+    assert.match(decodeURIComponent(href),/אישור הזמנה - עיזה בר\nדנה כהן, שולחן ל-3 סועדים\n25\.11 בשעה 17:15/);
+    await ctx.close();
+  });
   test('there is no email field (owner decided against emails)',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await fillBooking(page);
@@ -95,7 +117,7 @@ describe('customer booking page',()=>{
     assert.ok((await text(page,'.summary-box')).includes(evil));
     await page.click('#submitBtn');await page.waitForSelector('.success');await page.waitForTimeout(200);
     assert.ok((await text(page,'.success')).includes(evil));
-    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img').length].join()),',0');
+    assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview)').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
   test('a wrong phone number is explained before anything is sent',async()=>{

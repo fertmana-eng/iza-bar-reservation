@@ -21,7 +21,8 @@ const PHONE={width:390,height:844};
 
 // Open a page (default: the customer booking page). opts: file ('admin.html'),
 // cfg (fake database options), time (fixed clock), timezoneId (the phone's
-// time zone; default Israel), userAgent (e.g. an Android phone's).
+// time zone; default Israel), userAgent (e.g. an Android phone's),
+// init (a function run in the page before it loads, e.g. to fake phone features).
 // Every outside request (fonts etc.) is blocked so the tests never touch the internet;
 // the database library is replaced by the fake.
 async function openPage(browser,url,opts={}){
@@ -31,6 +32,7 @@ async function openPage(browser,url,opts={}){
   page.on('dialog',d=>{dialogs.push(d.message());opts.dismissDialogs?d.dismiss():d.accept();});
   if(opts.time)await page.clock.setFixedTime(new Date(opts.time));
   await page.addInitScript(c=>{window.__cfg=c;},opts.cfg||{});
+  if(opts.init)await page.addInitScript(opts.init);
   await page.route(u=>!u.href.startsWith(url),r=>/supabase-js/.test(r.request().url())
     ?r.fulfill({contentType:'text/javascript',body:FAKE}):r.abort());
   await page.goto(url+(opts.file||''));await page.waitForTimeout(opts.wait??300);
