@@ -336,6 +336,29 @@ describe('manager page (floor plan and evening sheet)',()=>{
     assert.equal(await page.textContent('#barCount'),'3/12');
     assert.equal(await text(page,'#summary'),'3 הזמנות · 11 סועדים · 1 ממתינות לאישור · 1 הגיעו');await ctx.close();
   });
+  test('late guests: orange after the booking time, red after 15 minutes, counted at the top',async()=>{
+    const rows=[
+      {id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_name:'רון',phone:'052-1',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'confirmed'},
+      {id:2,reservation_date:'2026-11-22',arrival_time:'18:45:00',customer_name:'דנה',phone:'052-2',guests:5,note:null,assigned_table_id:3,assigned_kind:'table',status:'confirmed'},
+      {id:3,reservation_date:'2026-11-22',arrival_time:'18:30:00',customer_name:'אבי',phone:'052-3',guests:7,note:null,assigned_table_id:7,assigned_kind:'table',status:'confirmed',arrived_at:'2026-11-22T16:31:00Z'},
+      {id:4,reservation_date:'2026-11-22',arrival_time:'20:00:00',customer_name:'נועה',phone:'052-4',guests:4,note:null,assigned_table_id:4,assigned_kind:'table',status:'confirmed'}];
+    const {page,ctx}=await openAdmin(rows,{time:'2026-11-22T19:10:00+02:00'});
+    const st=await planStates(page);
+    assert.deepEqual([st[1],st[3],st[7],st[4]],['late','late15','arrived','booked']);
+    assert.equal(await text(page,'#summary'),'4 הזמנות · 18 סועדים · 1 הגיעו · 2 מאחרים');
+    const sheet=await sheetRows(page);
+    assert.equal(sheet[0],'1 רון מאחרים 10 דק׳ 19:00 2');
+    assert.equal(sheet[2],'3 דנה מאחרים 25 דק׳ 18:45 5');
+    assert.equal(await page.textContent('#plan .tbl[data-table="3"] .num'),'3');
+    await page.click('#plan .tbl[data-table="3"]');await page.waitForSelector('#lateNote');
+    assert.equal(await text(page,'#lateNote'),'מאחרים 25 דקות. עברו 15 דקות: אפשר לשחרר את השולחן.');
+    await page.click('#arrivedBtn');                      // they arrived: no longer late
+    await page.waitForFunction(()=>document.querySelector('#plan .tbl[data-table="3"]').classList.contains('arrived'),null,{timeout:10000});
+    assert.equal(await text(page,'#summary'),'4 הזמנות · 18 סועדים · 2 הגיעו · 1 מאחרים');await ctx.close();
+    const other=await openAdmin(rows.map(r=>({...r,reservation_date:'2026-11-21'})),{time:'2026-11-22T19:10:00+02:00'});
+    await other.page.click('#prevDay');await other.page.waitForSelector('#summary');
+    assert.doesNotMatch(await text(other.page,'#summary'),/מאחרים/,'another day is never late');await other.ctx.close();
+  });
   test('the day can be changed with the arrows; just after midnight it opens on the new day',async()=>{
     const {page,ctx}=await openAdmin();
     await page.click('#nextDay');await page.waitForTimeout(200);

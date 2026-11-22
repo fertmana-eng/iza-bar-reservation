@@ -68,7 +68,11 @@ Same owner as the IzaZoo management app (repository
   guess** (`PLAN_TABLES` in admin.html: 3, 1, 2 on the left wall; 18, 4 on
   the right wall; 6 the window counter; 7 the lounge): the owner corrects it.
   Refreshes quietly every minute (not while a panel is open or a move is
-  being chosen).
+  being chosen). **Late guests** (owner, 22 Nov 2026): tonight's confirmed
+  booking not marked "הגיעו" turns orange after its time ("מאחרים N דק׳" on
+  the sheet, +N′ on the plan) and red at 15 minutes (the bar's rule; the
+  panel says the table may be released); the top shows "N מאחרים". Works
+  only if staff tap "הגיעו ✓" when guests sit down.
 - Login (owner's decision, Nov 2026): **one user only, the restaurant**,
   username `izabar`. Supabase logins need an email, so the page turns the
   username into `izabar@izabar.local` (not a real inbox; created by the owner
@@ -238,7 +242,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (68 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (69 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
