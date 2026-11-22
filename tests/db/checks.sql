@@ -43,6 +43,12 @@ begin
       then failed:=failed||(r.proname||': wrong public access'); end if;
   end loop;
 
+  -- the same-day cutoff must use Israel time, not the database's UTC
+  total:=total+1;
+  if not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname='book_reservation'
+                and 'TimeZone=Asia/Jerusalem'=any(proconfig))
+    then failed:=failed||'book_reservation does not run in Israel time'::text; end if;
+
   -- ---------- as the public (anyone with the page's key) ----------
   perform set_config('role','anon',true);
   perform set_config('request.jwt.claims','{"role":"anon"}',true);

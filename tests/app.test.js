@@ -86,6 +86,31 @@ describe('customer booking page',()=>{
     assert.match(await text(page,'#stepArea'),/ההזמנות המקוונות ליום זה נסגרו/);
     assert.equal((await rpcCalls(page,'available_spots')).length,0);await ctx.close();
   });
+  // Bug found Nov 2026: every calendar day was linked to the day before it
+  // (dates went through UTC), so tapping 26 booked the 25th.
+  const calendarDays=page=>page.evaluate(()=>[...document.querySelectorAll('.cal-grid button')]
+    .map(b=>({n:+b.textContent,date:b.dataset.date,today:b.classList.contains('today')})));
+  for(const [label,time,today] of [['in the morning','2026-11-22T10:00:00+02:00','2026-11-22'],['just after midnight','2026-11-23T00:30:00+02:00','2026-11-23']]){
+    test(`each calendar day books that same date, and today is marked correctly (${label})`,async()=>{
+      const {page,ctx}=await open({time});
+      await page.click('#introNext');
+      const days=await calendarDays(page);
+      assert.deepEqual(days.filter(d=>+d.date.slice(8)!==d.n),[]);
+      assert.deepEqual(days.filter(d=>d.today).map(d=>d.date),[today]);
+      await page.click('.cal-grid button:has-text("26")');await page.click('#dateNext');await page.waitForTimeout(200);
+      assert.equal((await rpcCalls(page,'available_spots'))[0].args.p_date,'2026-11-26');
+      await ctx.close();
+    });
+  }
+  test('a phone in another time zone still uses Israel time for today and the cutoff',async()=>{
+    // 18:00 in Israel is 11:00 in New York: today is already closed in Israel
+    const {page,ctx}=await open({time:'2026-11-22T18:00:00+02:00',timezoneId:'America/New_York'});
+    await page.click('#introNext');
+    assert.deepEqual((await calendarDays(page)).filter(d=>d.today).map(d=>d.date),['2026-11-22']);
+    await page.click('.cal-grid button[data-date="2026-11-22"]');await page.click('#dateNext');await page.waitForTimeout(200);
+    assert.match(await text(page,'#stepArea'),/ההזמנות המקוונות ליום זה נסגרו/);
+    await ctx.close();
+  });
   test('tapping a finished step in the progress line goes back to it',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await fillBooking(page);
@@ -145,6 +170,11 @@ describe('manager page',()=>{
     assert.match(t,/הזמנות ל-22\.11\.2026/);assert.match(t,/2 הזמנות · 5 סועדים/);
     assert.match(t,/שולחנות גבוהים.*רון · שולחן 1.*בר.*מאיה · בר.*כיסא תינוק/);
     assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('just after midnight, the manager page opens on the new day (Israel time)',async()=>{
+    const {page,ctx}=await open({file:'admin.html',time:'2026-11-23T00:30:00+02:00'});
+    assert.match(await text(page,'#listContent'),/הזמנות ל-23\.11\.2026/);
+    assert.equal(await page.inputValue('#dateInput'),'2026-11-23');await ctx.close();
   });
   test('cancelling asks first and then marks the booking cancelled',async()=>{
     const {page,ctx,dialogs}=await open({file:'admin.html',time:MORNING,cfg:{reservations}});

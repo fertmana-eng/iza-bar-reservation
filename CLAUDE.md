@@ -52,7 +52,7 @@ Same owner as the IzaZoo management app (repository
 - Backend: its own Supabase project, separate from IzaZoo: "IZA Bar
   reservation", id `brpovhypzsgwsnuenpfj` (free plan; it pauses after
   inactivity; restored 22 Nov 2026 with the owner's OK; database time zone
-  is UTC; 2 test bookings, no login users yet). Only the publishable key is in the
+  is UTC, so anything using the clock must set Israel time). Only the publishable key is in the
   pages. The supabase-js library is loaded from a CDN (jsdelivr, unpinned
   version `@2`); IzaZoo uses a bundled copy instead.
 - Hosting (owner's decision, Nov 2026): **exactly like IzaZoo: GitHub Pages
@@ -77,10 +77,10 @@ Same owner as the IzaZoo management app (repository
    sign-up switched off by the owner). `tests/db/checks.sql`: ALL 17 PASSED.
 2. ~~`check_availability` missing~~: it exists in the real database (created
    by hand in Sept); now saved as `supabase/migrations/05_check_availability.sql`.
-3. **Time zone.** The database's `current_date`/`current_time` are UTC, so the
-   17:00 same-day cutoff really applies at about 19:00–20:00 Israel time. The
-   pages use `toISOString()` for "today", which is UTC too (wrong date between
-   midnight and 02:00/03:00 Israel time). IzaZoo had the same bug.
+3. ~~Time zone~~: fixed 22 Nov 2026. The pages use Israel time whatever the
+   phone's time zone; `book_reservation` runs in Israel time
+   (`07_israel_time.sql`). This also fixed a worse bug: every calendar day was
+   linked to the day before it (tapping 26 booked the 25th).
 4. **Customer text is inserted as HTML** (name, note) on the manager page and
    in the email: a customer could inject code. Escape it.
 5. **`send-confirmation` can be called by anyone** with any address and text,
@@ -146,7 +146,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (17 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (21 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
@@ -171,6 +171,18 @@ with a fixed clock in Israel time.
 - Nov 2026: manager login on `admin.html` (one user, `izabar`), sign out, and
   a message with "נסו שוב" when bookings can't be loaded. Bookings closed to
   the public in the database (`06_manager_login.sql`); saved database check.
+
+- Nov 2026: Israel time everywhere (pages and the database cutoff); the
+  calendar's day numbers now book the right date.
+
+## Lessons learned
+
+- **Never use `toISOString()` for a date.** It converts to UTC, which in
+  Israel is the previous day for local midnight: every calendar day was
+  linked to the day before it. Build 'YYYY-MM-DD' from the date's own numbers,
+  and get "today"/"now" with `Intl.DateTimeFormat(..., {timeZone:'Asia/Jerusalem'})`.
+  In the database, `current_date`/`current_time` are UTC unless the function
+  sets `timezone`.
 
 ## Health checks
 
