@@ -41,7 +41,7 @@ begin
   -- functions the booking page needs are callable by the public; nothing else is
   for r in select p.oid, p.proname from pg_proc p where p.pronamespace='public'::regnamespace loop
     total:=total+1;
-    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability','get_booking','cancel_booking','update_booking_note','change_booking'))
+    if has_function_privilege('anon',r.oid,'EXECUTE') <> (r.proname in ('book_reservation','available_spots','check_availability','get_booking','cancel_booking','update_booking_note','change_booking','save_push_subscription'))
       then failed:=failed||(r.proname||': wrong public access'); end if;
   end loop;
 
@@ -64,6 +64,12 @@ begin
     then failed:=failed||'settings: expected cutoff 20:00 and approval from 16:00'::text; end if;
   -- same-day approval window (09_approval_window.sql): statuses, the manager's answers, held tables
   -- changes (11_booking_changes.sql): only the manager answers; a waiting change keeps its original table
+  -- notifications (12_push_notifications.sql): phone addresses and keys are locked away
+  total:=total+1;
+  if exists(select 1 from information_schema.role_table_grants where table_schema='public'
+            and table_name in ('push_subscriptions','app_secrets') and grantee in ('anon','authenticated'))
+     or not exists(select 1 from public.app_secrets where key='vapid_private')
+    then failed:=failed||'notifications: tables not locked, or the key is missing'::text; end if;
   total:=total+1;
   if has_function_privilege('anon','public.decide_request(bigint,boolean)','EXECUTE')
      or not has_function_privilege('authenticated','public.decide_request(bigint,boolean)','EXECUTE')
@@ -131,6 +137,15 @@ begin
     if public.change_booking(gen_random_uuid(), d, '19:00', 2)<>'not_found' then failed:=failed||'a wrong secret can change a booking'::text; end if;
     if public.change_booking(tok, d, '19:00', 11)<>'invalid' then failed:=failed||'a change to 11 guests is not refused'::text; end if;
     if public.change_booking(tok, d, '20:00', 3) not in ('confirmed','full') then failed:=failed||'the link cannot change the booking'::text; end if;
+    if public.save_push_subscription(gen_random_uuid(),'https://push.example/x',repeat('p',40),repeat('a',16))<>'not_found'
+       or public.save_push_subscription(tok,'http://not-secure/x',repeat('p',40),repeat('a',16))<>'invalid'
+      then failed:=failed||'notification sign-up accepts a wrong secret or a bad address'::text; end if;
+    if public.save_push_subscription(tok,'https://push.example/x',repeat('p',40),repeat('a',16))<>'saved'
+      then failed:=failed||'the link cannot sign up for notifications'::text; end if;
+    begin perform 1 from public.push_subscriptions; failed:=failed||'the public can read phone addresses'::text;
+    exception when insufficient_privilege then null; end;
+    begin perform 1 from public.app_secrets; failed:=failed||'the public can read the notification keys'::text;
+    exception when insufficient_privilege then null; end;
     if public.cancel_booking(tok)<>'cancelled' then failed:=failed||'the link cannot cancel'::text; end if;
   end if;
   total:=total+1;
@@ -151,6 +166,9 @@ begin
   total:=total+1;
   begin insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_kind) values(d,'18:00','x','x',2,'table');
     failed:=failed||'the manager can add bookings directly'::text;
+  exception when insufficient_privilege then null; end;
+  total:=total+1;
+  begin perform 1 from public.app_secrets; failed:=failed||'the manager page can read the notification keys'::text;
   exception when insufficient_privilege then null; end;
 
   perform set_config('role','postgres',true);

@@ -71,6 +71,7 @@
           if(res==='confirmed')Object.assign(bk,{prev_date:null,prev_time:null,prev_guests:null});
           Object.assign(bk,{reservation_date:args.p_date,arrival_time:args.p_time+':00',guests:args.p_guests,status:res});}
         return {data:res,error:null};}
+      if(name==='save_push_subscription'){if(!bk)return {data:'not_found',error:null};(db.push=db.push||[]).push(args);return {data:'saved',error:null};}
       if(name==='decide_request'){const r=db.reservations.find(x=>x.id===args.p_id);if(!r)return {data:'not_found',error:null};
         if(args.p_approve){Object.assign(r,{status:'confirmed',prev:null});return {data:'confirmed',error:null};}
         if(r.prev){Object.assign(r,{...r.prev,status:'confirmed',prev:null});return {data:'reverted',error:null};}

@@ -81,6 +81,8 @@
   const BUSINESS_NAME = "עיזה בר";
   // The bar can't be reached by phone, only by WhatsApp (or Facebook / Instagram messages)
   const BAR_WHATSAPP = "972545904470";
+  // Public half of the notification keys (the private half is only on the server)
+  const VAPID_PUBLIC = "BHdpuZjwMDxA8ns-lmmI4lujkUbgB3L8YBT9pobeVK3P2W9jJsGAQfN4jLHEPeAYnQOXCt0LbQoqBYa6PWTb74o";
 </script>
 <!-- =================================================== -->
 
@@ -126,6 +128,51 @@ async function loadHours() {
   const { data } = await db.from('settings').select('key,value').in('key', ['arrival_start', 'arrival_end', 'booking_cutoff']);
   const v = Object.fromEntries((data || []).map(r => [r.key, r.value]));
   hours = { start: v.arrival_start || hours.start, end: v.arrival_end || hours.end, cutoff: v.booking_cutoff || hours.cutoff };
+}
+
+// Notifications (Android, and iPhone only when the site is on the home screen): the phone
+// registers sw.js and gives the database its address for this booking; the bar's answer is
+// sent by the server function notify-booking.
+const PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const IS_IPHONE = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const pushKey = () => 'izabar_push_' + token;
+function pushOn() { try { return localStorage.getItem(pushKey()) === '1'; } catch (e) { return false; } }
+function keyBytes(b64) {
+  const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(s, c => c.charCodeAt(0));
+}
+function notifyHtml(b) {
+  if (b.status !== 'pending') return '';
+  if (PUSH_OK) return pushOn()
+    ? `<p class="hint" id="pushOn">🔔 תקבלו התראה בטלפון כשנאשר.</p>`
+    : `<button type="button" class="btn-outline" id="pushBtn">🔔 קבלו התראה כשנאשר</button>`;
+  if (IS_IPHONE) return `<p class="hint" id="pushIphone">באייפון התראות עובדות רק אם מוסיפים את האתר למסך הבית. נעדכן אתכם גם בוואטסאפ.</p>`;
+  return '';
+}
+async function enablePush() {
+  const btn = document.getElementById('pushBtn');
+  btn.disabled = true;
+  try {
+    if (await Notification.requestPermission() !== 'granted') {
+      message = { text: 'ההתראות חסומות בטלפון. אפשר להפעיל אותן בהגדרות הדפדפן, ונעדכן אתכם גם בוואטסאפ.' };
+    } else {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription()
+        || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC) });
+      const j = sub.toJSON();
+      const { data, error } = await db.rpc('save_push_subscription',
+        { p_token: token, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+      if (!error && data === 'saved') {
+        try { localStorage.setItem(pushKey(), '1'); } catch (e) {}
+        message = { ok: true, text: 'מעולה! תקבלו התראה כשנאשר.' };
+      } else message = { text: 'לא הצלחנו להפעיל התראות. נעדכן אתכם בוואטסאפ.' };
+    }
+  } catch (e) {
+    message = { text: 'לא הצלחנו להפעיל התראות בטלפון הזה. נעדכן אתכם בוואטסאפ.' };
+  }
+  booking = null;
+  await load();
 }
 
 function shortDate(d) { const [, m, day] = d.split('-').map(Number); return `${day}.${m}`; }
@@ -178,6 +225,7 @@ function render() {
       ? `<img class="card-preview" id="cardPreview" alt="${STATUS[b.status]}: ${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים, ${when}" hidden>`
       : `<div class="closed-box"><h2>${STATUS[b.status]}</h2><p>${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים</p><p>${when}</p></div>`}
     ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
+    ${notifyHtml(b)}
     ${b.status === 'pending' && b.prev_date ? `<p class="pending-note" id="pendingNote">השינוי ממתין לאישור. אם לא יאושר, נשארת ההזמנה המקורית:
       ${shortDate(b.prev_date)} בשעה ${b.prev_time.slice(0, 5)}, ${b.prev_guests} סועדים.</p>` : ''}
     ${b.can_change ? `
@@ -208,6 +256,7 @@ function render() {
   message = null;
   if (active) drawCard();
   document.getElementById('saveNote')?.addEventListener('click', saveNote);
+  document.getElementById('pushBtn')?.addEventListener('click', enablePush);
   if (b.can_change) {
     fillTimes(b.arrival_time.slice(0, 5));
     document.getElementById('dateInput').addEventListener('change', () => fillTimes(document.getElementById('timeInput').value));

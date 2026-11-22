@@ -361,6 +361,7 @@ describe('manager page',()=>{
     assert.ok(wa);
     await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
     await page.waitForFunction(()=>/1 הזמנות/.test(document.getElementById('listContent').innerText),null,{timeout:10000});
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.fn).map(o=>[o.fn,o.body])),[['notify-booking',{id:5,result:'confirmed'}]]);
     assert.match(await text(page,'#listContent'),/1 הזמנות · 4 סועדים/);
     assert.equal(await page.isVisible('.pending-card'),false);await ctx.close();
   });
@@ -395,6 +396,9 @@ describe('manager page',()=>{
     assert.deepEqual(dialogs,['לדחות את השינוי? ההזמנה המקורית תישאר בתוקף.']);
     await page.waitForFunction(()=>__db.reservations[0].status==='confirmed',null,{timeout:10000});
     assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='decide_request').map(o=>o.args)),[{p_id:5,p_approve:false}]);
+    // the customer's phone is notified too (server function notify-booking)
+    await page.waitForFunction(()=>__ops.some(o=>o.fn==='notify-booking'),null,{timeout:10000});
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.fn).map(o=>[o.fn,o.body])),[['notify-booking',{id:5,result:'reverted'}]]);
     assert.equal(await page.evaluate(()=>__db.reservations[0].arrival_time),'19:00:00');await ctx.close();
   });
   test('customer changes and cancellations are marked',async()=>{
@@ -488,6 +492,52 @@ describe('personal booking page (booking.html#secret)',()=>{
     const {page,ctx}=await openBooking({reservation_date:'2026-11-22',arrival_time:'20:00:00'},{time:'2026-11-22T18:40:00+02:00'});
     await page.waitForSelector('#saveChange');
     assert.equal(await page.evaluate(()=>[...timeInput.options].map(o=>o.value).join(' ')),'19:15 19:30 19:45 20:00 20:15 20:30 20:45 21:00');
+    await ctx.close();
+  });
+  // a phone that can receive notifications (Android): fake the browser's notification parts
+  const fakePush=permission=>`(()=>{window.__subs=[];
+    Object.defineProperty(window,'Notification',{value:{requestPermission:async()=>'${permission}'},configurable:true});
+    const reg={pushManager:{getSubscription:async()=>null,subscribe:async o=>{window.__subs.push(o.applicationServerKey.length);
+      return {toJSON:()=>({endpoint:'https://push.example/abc',keys:{p256dh:'p'.repeat(40),auth:'a'.repeat(16)}})};}}};
+    Object.defineProperty(navigator,'serviceWorker',{value:{register:async f=>{window.__sw=f;return reg;},ready:Promise.resolve(reg)},configurable:true});
+    window.PushManager=window.PushManager||function(){};})()`;
+  test('while waiting for approval, the customer can turn on a notification',async()=>{
+    const {page,ctx,errors}=await openBooking({status:'pending'},{init:fakePush('granted')});
+    await page.waitForSelector('#pushBtn');await page.click('#pushBtn');
+    await page.waitForSelector('#pushOn');
+    assert.match(await text(page,'#msg'),/מעולה! תקבלו התראה כשנאשר/);
+    assert.equal(await page.evaluate(()=>window.__sw),'sw.js');
+    assert.deepEqual(await page.evaluate(()=>window.__subs),[65],'the public key is the 65-byte notification key');
+    assert.deepEqual(await page.evaluate(()=>__ops.filter(o=>o.rpc==='save_push_subscription').map(o=>o.args)),
+      [{p_token:TOKEN,p_endpoint:'https://push.example/abc',p_p256dh:'p'.repeat(40),p_auth:'a'.repeat(16)}]);
+    await page.reload();await page.waitForSelector('#pushOn');     // remembered on this phone
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('if notifications are blocked, the customer is told WhatsApp still works',async()=>{
+    const {page,ctx}=await openBooking({status:'pending'},{init:fakePush('denied')});
+    await page.waitForSelector('#pushBtn');await page.click('#pushBtn');await page.waitForSelector('#msg');
+    assert.match(await text(page,'#msg'),/ההתראות חסומות בטלפון.*נעדכן אתכם גם בוואטסאפ/);
+    assert.equal(await page.evaluate(()=>__ops.filter(o=>o.rpc==='save_push_subscription').length),0);await ctx.close();
+  });
+  test('no notification button for a confirmed booking; an iPhone without the home screen gets a hint',async()=>{
+    const confirmed=await openBooking({},{init:fakePush('granted')});
+    await confirmed.page.waitForSelector('#cancelBtn');
+    assert.equal(await confirmed.page.isVisible('#pushBtn'),false);await confirmed.ctx.close();
+    const iphone=await openBooking({status:'pending'},{userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+      init:()=>{delete window.PushManager;}});
+    await iphone.page.waitForSelector('#pushIphone');
+    assert.match(await text(iphone.page,'#pushIphone'),/מוסיפים את האתר למסך הבית/);await iphone.ctx.close();
+  });
+  test('the notification helper shows the bar\'s answer and opens the booking when tapped',async()=>{
+    const {page,ctx}=await openBooking();
+    const r=await page.evaluate(async()=>{
+      const handlers={},shown=[],opened=[];
+      const self={addEventListener:(n,f)=>handlers[n]=f,registration:{showNotification:async(t,o)=>shown.push([t,o])},clients:{openWindow:async u=>opened.push(u)}};
+      new Function('self',await (await fetch('sw.js')).text())(self);
+      let wait;handlers.push({data:{json:()=>({title:'ההזמנה שלך לעיזה בר אושרה ✳',body:'25.11 בשעה 19:00',url:'https://x/booking.html#t'})},waitUntil:p=>wait=p});await wait;
+      handlers.notificationclick({notification:{close(){},data:{url:'https://x/booking.html#t'}},waitUntil:p=>wait=p});await wait;
+      return {shown,opened};});
+    assert.deepEqual(r,{shown:[['ההזמנה שלך לעיזה בר אושרה ✳',{body:'25.11 בשעה 19:00',dir:'rtl',lang:'he',data:{url:'https://x/booking.html#t'}}]],opened:['https://x/booking.html#t']});
     await ctx.close();
   });
   test('a request waiting for approval says so',async()=>{

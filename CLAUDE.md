@@ -45,6 +45,7 @@ Same owner as the IzaZoo management app (repository
   16:00 (private, read only by the function). The customer's card says "הבקשה
   התקבלה · ממתינה לאישור" and has no "add to calendar".
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
+  `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
 - `admin.html`: the manager page: login first, then the bookings of a chosen
   day: "ממתינות לאישור" first (אישור / דחייה: saves the answer and opens
@@ -154,7 +155,19 @@ Same owner as the IzaZoo management app (repository
    / available_spots use the helpers; get_booking returns the original's
    details) to be run by the owner. Dry run at 17:31 Israel time passed
    (request, change, decline restores, approve frees the original, locked,
-   invalid, public can't approve). Next: step 4 (Android notifications). Step 2 of accounts (optional sign-in, history)
+   invalid, public can't approve).
+   Step 4 built (22 Nov 2026, `12_push_notifications.sql`, applied via the
+   connector): while a request or change waits, the personal page offers
+   "🔔 קבלו התראה כשנאשר" (Android; on iPhone only from the home screen, so
+   iPhones get a hint instead). The phone registers `sw.js` and its address
+   is saved with `save_push_subscription` (secret link only) in the locked
+   table `push_subscriptions`. After אישור / דחייה the manager page calls the
+   edge function `notify-booking` (deployed; refuses anyone but the logged-in
+   manager), which sends the notification with the keys in the locked table
+   `app_secrets` (key values are only in the database, never in the repo;
+   the public half is in booking.html). A real phone notification can't be
+   tested from Claude's machine: the owner checks it on Android.
+   Database check: ALL 50 PASSED (before the owner runs 11b). Step 2 of accounts (optional sign-in, history)
    later. Reminders: customer sign-in would change the database's "logged in
    = manager" rule (must become an explicit manager role); SMS sign-in costs
    money per message; Apple sign-in needs a paid developer account; iPhone
@@ -204,7 +217,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (57 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (61 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
