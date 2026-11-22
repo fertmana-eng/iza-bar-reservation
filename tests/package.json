@@ -1,0 +1,14 @@
+{
+  "name": "iza-bar-reservation-tests",
+  "private": true,
+  "description": "Tests and tools for the table reservation pages. Playwright with Chromium must already be installed.",
+  "scripts": {
+    "test": "node --test app.test.js",
+    "shots": "node visual/screenshots.js",
+    "compare": "node visual/compare.js"
+  },
+  "devDependencies": {
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  }
+}

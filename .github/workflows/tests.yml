@@ -1,0 +1,25 @@
+# Runs the reservation behaviour tests automatically on every change.
+# A red ✗ on a change means a test failed: don't merge it until it is fixed.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  behaviour-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install test tools
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run tests
+        run: node --test tests/app.test.js

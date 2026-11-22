@@ -1,0 +1,45 @@
+---
+name: security-check
+description: Security check for reservation changes that touch customer data, the manager page, logins, the database or the send-confirmation edge function. Use before merging such a change, or when the owner types /security-check.
+---
+
+# Security check
+
+Work in plain, non-technical language for the owner (see CLAUDE.md). Read only;
+never change the database without the owner's OK (CLAUDE.md explains how
+database changes are applied).
+
+Supabase project id: `brpovhypzsgwsnuenpfj` (it pauses after inactivity; if
+it is paused, ask the owner before restoring it).
+
+The rule to protect: **customers' names, phone numbers and emails may be seen
+only by a logged-in manager.** The publishable key is in the public booking
+page, so anything the "anon" role can reach, anyone on the internet can reach.
+
+1. **Automatic advisor:** run Supabase's security advisor and explain every
+   warning.
+2. **Anonymous access:** the anon role may only read the public settings
+   (arrival hours, cutoff) and call the booking functions
+   (`book_reservation`, `available_spots`, `check_availability`). It must not be
+   able to read, change or cancel reservations, or read table names that the
+   customer shouldn't see. Check both layers: table permissions (GRANT,
+   `information_schema.role_table_grants`) and row rules (policies), plus
+   EXECUTE on every function.
+3. **Booking functions:** they run with extra rights (security definer), so
+   they must check their own input: date in range, time within hours, guests
+   1–10, name/phone/note/email of reasonable length, and `search_path` set.
+4. **Test every write as the real role, exactly as the page does it,** in a DO
+   block that ends with `raise exception` so everything is rolled back (avoid
+   UPDATE/DELETE there; they trigger a confirmation prompt that times out —
+   check those rules by reading the policy). The tests in `tests/` use a fake
+   database with no access rules, so they can't catch this.
+5. **Edge function `send-confirmation`:** compare the deployed code with
+   `supabase/functions/send-confirmation/index.ts`. It must not let strangers
+   send arbitrary emails, and customer text in the email must be escaped.
+6. **Page code:** no passwords or keys (other than the publishable key) in the
+   pages; anything built from customer text (name, note) is escaped before it
+   is shown, especially on the manager page.
+7. Keep `supabase/` in step: if a database change or function deploy happened,
+   save it there.
+8. Report in plain language: what was checked, anything found, and what you
+   propose (ask before applying).
