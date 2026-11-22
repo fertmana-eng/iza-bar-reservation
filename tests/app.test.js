@@ -58,6 +58,31 @@ describe('customer booking page',()=>{
     assert.deepEqual(fns,[{fn:'send-confirmation',body:{email:'dana@example.com',name:'דנה כהן',date:'2026-11-25',time:'17:15',guests:3}}]);
     await ctx.close();
   });
+  test('"add to calendar" on Android opens Google Calendar with the booking filled in',async()=>{
+    const {page,ctx}=await open({time:MORNING,userAgent:'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36'});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
+    assert.equal(await page.isVisible('#icsBtn'),false,'no file button on Android');
+    const url=new URL(await page.getAttribute('#calLink','href'));
+    assert.equal(url.origin+url.pathname,'https://calendar.google.com/calendar/render');
+    assert.equal(url.searchParams.get('dates'),'20261125T171500/20261125T191500');
+    assert.equal(url.searchParams.get('ctz'),'Asia/Jerusalem');
+    assert.equal(url.searchParams.get('text'),'עיזה בר - שולחן ל-3');
+    assert.match(url.searchParams.get('details'),/דנה כהן/);
+    assert.equal(await page.getAttribute('#calLink','target'),'_blank');await ctx.close();
+  });
+  test('"add to calendar" elsewhere downloads a complete calendar file in the right time',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
+    const [dl]=await Promise.all([page.waitForEvent('download'),page.click('#icsBtn')]);
+    assert.equal(dl.suggestedFilename(),'reservation.ics');
+    const ics=require('fs').readFileSync(await dl.path(),'utf8');
+    // 17:15 in Israel in November is 15:15 UTC; two hours long
+    assert.match(ics,/\r\nDTSTART:20261125T151500Z\r\nDTEND:20261125T171500Z\r\n/);
+    for(const line of ['BEGIN:VCALENDAR','PRODID:','UID:','DTSTAMP:','SUMMARY:עיזה בר - שולחן ל-3','LOCATION:עיזה בר','END:VCALENDAR'])assert.ok(ics.includes(line),line);
+    // summer time: Israel is 3 hours ahead
+    assert.equal(await page.evaluate(()=>israelToUtc('20260610T170000')),'20260610T140000Z');
+    await ctx.close();
+  });
   test('a date with no free places shows a message and stays on the calendar',async()=>{
     const {page,ctx}=await open({time:MORNING,cfg:{spots:0}});
     await page.click('#introNext');await page.click('.cal-grid button[data-date="2026-11-25"]');

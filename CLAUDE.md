@@ -91,14 +91,16 @@ Same owner as the IzaZoo management app (repository
    have no `search_path` set and don't limit text length or guest count.
    (Only the 7-parameter `book_reservation` exists in the real database.)
 7. The `admin_password_hash` setting is unused (left over).
-8. **"הוספה ליומן" on Android** only downloads a `.ics` file (Chrome on
-   Android can't open it straight into the calendar; a platform rule). Plan:
-   on Android open Google Calendar with the booking filled in, keep the file
-   for iPhone. The file also lacks an end time, UID and DTSTAMP.
+8. ~~"הוספה ליומן" on Android~~: fixed 22 Nov 2026. Android opens Google
+   Calendar with the booking filled in (Chrome on Android can't open a
+   calendar file straight into the calendar, a platform rule); iPhone and
+   computers download a complete `.ics` (UTC times, end time, UID, DTSTAMP).
+   The visit is entered as **2 hours** (Claude's choice; ask the owner if it
+   should change).
 
 ## Next steps (in order)
 
-1. Fix 3–6 and 8, one change each (time zone first). Note: Supabase gives
+1. Fix 4–6, one change each. Note: Supabase gives
    anon and authenticated full permissions on any NEW table by default; set
    the grants explicitly whenever a table is added (06_manager_login.sql
    did this for the existing three).
@@ -146,7 +148,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (21 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (23 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
@@ -174,8 +176,23 @@ with a fixed clock in Israel time.
 
 - Nov 2026: Israel time everywhere (pages and the database cutoff); the
   calendar's day numbers now book the right date.
+- Nov 2026: "add to calendar" opens Google Calendar on Android; complete
+  calendar file elsewhere.
+- Nov 2026 (experiment, not part of this site): a 3D model of the bar from an
+  old architect's plan, with tappable seats, as a private claude.ai artifact
+  ("עיזה בר – בחירת מקומות", https://claude.ai/artifact/XodKCTKkfWuZLcSuZokYxM;
+  source kept outside the repo). The owner is considering letting customers
+  pick seats and may send a video tour, a newer plan and measurements to
+  update it. Real seat picking would need per-seat availability in the
+  database (today: whole table per evening, bar as a 12-seat pool) and
+  decisions on split groups and walk-ins: plan it with the owner first.
 
 ## Lessons learned
+
+- **In tests, never compare a page element object with `assert`.** When the
+  check fails, Node tries to print the whole browser object and runs out of
+  memory (the session's processes get killed). Compare plain values
+  (`isVisible`, text) instead.
 
 - **Never use `toISOString()` for a date.** It converts to UTC, which in
   Israel is the previous day for local midnight: every calendar day was
