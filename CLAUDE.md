@@ -120,7 +120,18 @@ Same owner as the IzaZoo management app (repository
 1. `09_approval_window.sql` run by the owner (22 Nov 2026);
    `tests/db/checks.sql`: ALL 25 PASSED. The owner will test a request
    between 16:00 and 20:00 and approve/decline it on the manager page later.
-2. New features with the owner (use a short planning interview first).
+2. **Personal booking link** (owner wants customer accounts with history,
+   notifications, changes and status; agreed to start with step 1, a private
+   link per booking, no sign-in): plan in `docs/plan-booking-link.md`,
+   waiting for the owner's OK and two answers (bar phone number; cancel
+   deadline). Step 2 later: optional accounts (e.g. Google sign-in) for
+   history. Reminders from that talk: customer sign-in would change the
+   database's "logged in = manager" rule (must become an explicit manager
+   role); SMS sign-in costs money per message; Apple sign-in needs a paid
+   developer account; iPhone web notifications only work from the home
+   screen.
+3. The manager page runs on a tablet with the restaurant's WhatsApp (owner,
+   Nov 2026), so approval messages go out from the restaurant's number.
 
 ## How we make changes (always)
 
