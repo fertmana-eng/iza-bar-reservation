@@ -44,10 +44,16 @@ Same owner as the IzaZoo management app (repository
   confirmed at once. Settings: `booking_cutoff` 20:00 (public), `approval_from`
   16:00 (private, read only by the function). The customer's card says "הבקשה
   התקבלה · ממתינה לאישור" and has no "add to calendar".
-- **IZAZOO logo** (owner, 22 Nov 2026): replaces "עיזה בר" in the black
-  header band of `index.html` and `booking.html` (white wordmark,
-  `assets/izazoo-logo-white.png`), and sits at the start of the tablet's top
-  bar and above its login (red, `assets/izazoo-logo-red.png`). Both were cut
+- **Customer pages look like the tablet screen** (owner, 22 Nov 2026):
+  `index.html` and `booking.html` use the manager page's palette (light
+  #f6f4ef background, white rounded boxes, #e4e0d6 lines, dark green
+  #2f4a3d buttons, the system font) with the red IZAZOO logo in a light
+  header. Heebo is still loaded only because the booking card picture uses
+  it. The card picture itself (card.js) keeps the old black/cream look.
+- **IZAZOO logo** (owner, 22 Nov 2026): replaces "עיזה בר" in the header of
+  `index.html` and `booking.html`, and sits at the start of the tablet's top
+  bar and above its login (red, `assets/izazoo-logo-red.png`; a white copy
+  `assets/izazoo-logo-white.png` exists for dark backgrounds). Both were cut
   from the IzaZoo app icon (`icon-512.png` in the IzaZoo repo, white IZAZOO
   on #D12026) with a see-through background. Still "עיזה בר": the WhatsApp
   booking card picture (card.js) and the message texts (not asked).

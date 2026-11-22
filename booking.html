@@ -8,67 +8,73 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
-  /* Same look as the booking page (index.html) */
+  /* Same look as the manager's tablet screen (admin.html): light background, white
+     rounded boxes, dark green buttons, the system font, the red IZAZOO logo.
+     (Heebo is still loaded: the booking card picture is drawn with it.) */
   :root {
-    --paper: #f0e8d0;
-    --paper-muted: rgba(240,232,208,0.62);
-    --ink: #1c1610;
-    --ink-soft: #5a4f3c;
-    --line: rgba(28,22,16,0.28);
-    --muted: rgba(28,22,16,0.55);
-    --field-bg: rgba(28,22,16,0.05);
-    --field-border: rgba(28,22,16,0.24);
+    --paper: #f6f4ef;
+    --card: #ffffff;
+    --ink: #1f1e1c;
+    --ink-soft: #6b6862;
+    --line: #e4e0d6;
+    --muted: #6b6862;
+    --field-bg: #ffffff;
+    --field-border: #e4e0d6;
+    --accent: #2f4a3d;
+    --danger: #7a2e2e;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: 'Heebo', -apple-system, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
-  .header-band { background: var(--ink); padding: 18px 20px 15px; text-align: center; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+  .header-band { background: var(--paper); border-bottom: 1px solid var(--line); padding: 14px 20px; text-align: center; }
   .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .venue-name, .slash-big { font-weight: 900; font-size: 26px; color: var(--paper); margin: 0; }
+  .venue-name { margin: 0; }
+  .slash-big { font-weight: 700; font-size: 22px; color: var(--line); }
   .venue-logo { display: block; height: 24px; width: auto; }
-  .venue-tag { color: var(--paper-muted); font-weight: 700; font-size: 13px; white-space: nowrap; }
-  .page { max-width: 400px; width: 100%; margin: 0 auto; padding: 24px 20px 64px; }
+  .venue-tag { color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .page { max-width: 420px; width: 100%; margin: 16px auto 64px; padding: 22px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  @media (max-width: 452px) { .page { margin: 16px 16px 64px; width: auto; } }
   .status { text-align: center; font-weight: 700; font-size: 15px; margin: 0 0 16px; }
   .status span { display: inline-block; padding: 6px 14px; border-radius: 999px; }
   .s-confirmed { background: #dcefe2; color: #1d6b3a; }
   .s-pending { background: #f6e7c4; color: #7a5200; }
-  .s-cancelled, .s-declined { background: rgba(28,22,16,0.1); color: var(--ink-soft); }
+  .s-cancelled, .s-declined { background: #efece5; color: var(--ink-soft); }
   .card-preview { display: block; width: min(320px, 86%); margin: 0 auto 22px; border-radius: 6px; box-shadow: 0 6px 24px rgba(28,22,16,.18); }
-  .closed-box { text-align: center; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 22px 0; margin-bottom: 22px; }
+  .closed-box { text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 0; margin-bottom: 22px; }
   .closed-box h2 { font-weight: 900; font-size: 24px; margin: 0 0 8px; }
   .closed-box p { margin: 4px 0; color: var(--ink-soft); }
   label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
   .section-title { font-weight: 700; font-size: 15px; margin: 0 0 12px; }
-  .change-box { border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 16px 0 18px; margin: 0 0 22px; }
+  .change-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 16px 0 18px; margin: 0 0 22px; }
   .change-grid { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr; gap: 10px; }
   .change-grid .field { margin-bottom: 0; }
-  input[type=date], select { width: 100%; height: 48px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 4px;
+  input[type=date], select { width: 100%; height: 48px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 10px;
     padding: 0 10px; font-size: 16px; font-family: inherit; color: var(--ink); }
   .pending-note { background: #f6e7c4; color: #5c3d00; border-radius: 6px; padding: 10px 12px; font-size: 14px; margin: 0 0 18px; text-align: center; }
-  textarea { width: 100%; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 4px; padding: 13px 14px; font-size: 17px; font-family: inherit; color: var(--ink); resize: none; }
-  textarea:focus { outline: none; border-color: var(--ink); }
-  .note-view { background: var(--field-bg); border-radius: 4px; padding: 12px 14px; margin: 0; white-space: pre-wrap; }
+  textarea { width: 100%; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 10px; padding: 13px 14px; font-size: 17px; font-family: inherit; color: var(--ink); resize: none; }
+  textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .note-view { background: var(--paper); border-radius: 10px; padding: 12px 14px; margin: 0; white-space: pre-wrap; }
   .field { margin-bottom: 18px; }
   .btn-outline, .btn-whatsapp, .btn-danger {
-    display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border-radius: 4px;
-    font-size: 15px; font-weight: 600; font-family: 'Heebo', sans-serif; cursor: pointer; margin-top: 10px; text-decoration: none;
+    display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border-radius: 10px;
+    font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 10px; text-decoration: none;
   }
-  .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--field-border); }
+  .btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--field-border); }
   .btn-whatsapp { background: #2fae60; color: #fff; border: none; font-weight: 700; }
-  .btn-danger { background: transparent; color: #8a3f22; border: 1px solid rgba(138,63,34,.45); }
+  .btn-danger { background: #fff; color: var(--danger); border: 1px solid rgba(122,46,46,.35); }
   button:disabled { opacity: 0.45; cursor: default; }
   .hint { font-size: 13px; color: var(--muted); text-align: center; margin: 14px 0 0; }
   .msg { font-size: 14px; text-align: center; margin: 10px 0 0; }
-  .msg.err { color: #8a3f22; }
+  .msg.err { color: var(--danger); }
   .msg.ok { color: #1d6b3a; }
-  .contact { margin-top: 28px; padding-top: 18px; border-top: 1px dashed var(--line); text-align: center; font-size: 14px; color: var(--ink-soft); }
+  .contact { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); text-align: center; font-size: 14px; color: var(--ink-soft); }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <div class="header-band">
   <div class="title-row">
-    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-white.png" alt="IZAZOO" width="168" height="24"></h1>
+    <h1 class="venue-name"><img class="venue-logo" src="assets/izazoo-logo-red.png" alt="IZAZOO" width="168" height="24"></h1>
     <span class="slash-big">//</span>
     <span class="venue-tag">ההזמנה שלי</span>
   </div>
