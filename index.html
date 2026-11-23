@@ -53,67 +53,46 @@
   .slash-big { font-weight: 700; font-size: 22px; color: var(--line); }
   .venue-tag { color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
 
-  .progress {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: baseline;
-    gap: 10px;
-    margin: 4px 0 16px;
-    font-size: 12px;
-  }
-  .progress:empty { margin: 0; }
-  .step-chip { color: var(--muted); }
-  .step-chip.current { color: var(--accent); font-weight: 800; font-size: 16px; }
-  button.step-chip.done {
-    all: unset;
-    color: var(--ink-soft);
-    font-size: inherit;
-    font-family: inherit;
-    cursor: pointer;
-    border-bottom: 1px dashed var(--ink-soft);
-    padding-bottom: 1px;
-  }
-  .step-sep { color: #cfc9bd; font-size: 10px; margin: 0 -3px; }
-
-  .summary-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 18px; align-items: baseline; }
-  .chip-btn {
-    all: unset;
-    color: var(--ink-soft);
-    font-size: 13px;
-    border-bottom: 1px dashed var(--ink-soft);
-    cursor: pointer;
-    padding-bottom: 1px;
-  }
-  .chip-sep { color: var(--muted); font-size: 12px; }
-  .summary-box {
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    padding: 14px 0;
-    margin: 18px 0 26px;
-  }
-  .summary-row {
-    all: unset;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 6px 0;
-    font-size: 14px;
-    cursor: pointer;
-    color: var(--ink);
-    font-family: inherit;
-  }
-  .summary-label { color: var(--ink-soft); }
-  .summary-value { font-weight: 600; }
-
   .notice { font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: center; margin: -16px 0 20px; }
-  #approvalNote { margin: 16px 0 0; color: var(--ink); }
+  #approvalNote { margin: -6px 0 14px; color: var(--ink); }
+
+  /* The three choice boxes (guests, date, time), side by side */
+  .pickers { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--field-border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .pick {
+    all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 64px; padding: 8px 4px; background: #fff; cursor: pointer; text-align: center; font-family: inherit;
+  }
+  .pick + .pick { border-right: 1px solid var(--field-border); }
+  .pick-value { font-size: 15.5px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .pick:not(.set) .pick-value { font-weight: 500; color: var(--muted); }
+  .pick-caret { font-size: 11px; color: var(--muted); line-height: 1; }
+  .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* Panel that slides up from the bottom of the screen */
+  .sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(31, 30, 28, .38); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet {
+    width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto; background: var(--card);
+    border-radius: 18px 18px 0 0; padding: 14px 18px calc(20px + env(safe-area-inset-bottom));
+    animation: sheet-up .18s ease-out;
+  }
+  @keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sheet-title { font-size: 18px; font-weight: 700; }
+  .sheet-close { background: none; border: none; font-size: 18px; color: var(--ink-soft); padding: 6px 8px; cursor: pointer; font-family: inherit; }
+  .choice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .choice-grid button {
+    all: unset; box-sizing: border-box; text-align: center; padding: 12px 0; border: 1px solid var(--field-border);
+    border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; font-family: inherit;
+  }
+  .choice-grid button.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .choice-grid button:disabled { color: #cfc9bd; border-color: var(--line); cursor: default; }
+
+  .details { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; scroll-margin-top: 70px; }
+  .found-title { font-size: 17px; font-weight: 700; color: var(--accent); margin: 0 0 16px; text-align: center; }
   .rules { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 16px; }
   .rules p { font-size: 14px; line-height: 1.55; color: var(--ink); margin: 0 0 6px; }
   .rules p:last-child { margin-bottom: 0; }
 
-  .step-label { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin: 0 0 6px; }
   .step-question { font-size: 21px; font-weight: 700; margin: 0 0 24px; }
 
   label {
@@ -152,13 +131,6 @@
     color: #fff;
   }
   button.primary:disabled { opacity: 0.45; }
-  .skip-link {
-    display: block;
-    text-align: center;
-    background: none; border: none;
-    color: var(--ink-soft); font-size: 14px; font-family: inherit;
-    margin-top: 14px; cursor: pointer;
-  }
 
   /* Calendar */
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -178,31 +150,9 @@
 
   .warning { color: var(--danger); font-size: 14px; margin-top: 16px; text-align: center; }
 
-  /* Time picker */
-  .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .time-grid button {
-    all: unset; box-sizing: border-box; text-align: center; padding: 13px 0;
-    border: 1px solid var(--field-border); border-radius: 10px;
-    font-size: 15px; color: var(--ink); cursor: pointer;
-  }
-  .time-grid button.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* Guests stepper */
-  .stepper { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 10px; }
-  .stepper button {
-    all: unset; width: 46px; height: 46px; border-radius: 50%;
-    border: 1px solid var(--field-border); background: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 22px; cursor: pointer; color: var(--accent);
-  }
-  .stepper-value { font-size: 32px; font-weight: 700; min-width: 50px; text-align: center; }
-  .stepper button:disabled { opacity: 0.3; cursor: default; }
   .hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
 
   .error { color: var(--danger); font-size: 13px; margin-top: 8px; }
-
-  .full-msg { text-align: center; padding: 4px 0; }
-  .full-msg p:first-child { font-size: 17px; margin-bottom: 8px; }
-  .full-msg p:last-child { color: var(--muted); font-size: 14px; }
 
   .success { text-align: center; padding: 8px 0 28px; }
   .success h2 { font-family: inherit; font-weight: 900; font-size: 24px; margin: 0 0 10px; }
@@ -239,7 +189,6 @@
   </div>
 </div>
 <div class="page" id="page">
-  <div class="progress" id="progress"></div>
   <div id="stepArea"><p style="text-align:center; color:var(--muted);">טוען...</p></div>
 </div>
 
@@ -259,21 +208,16 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
 const stepArea = document.getElementById('stepArea');
-const progressEl = document.getElementById('progress');
 const BOOKING_WINDOW_DAYS = 30;
 // Shown to customers only; the database decides (its 'approval_from' setting is private).
 const APPROVAL_FROM = '16:00';
 const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
-const STEPS = ['date', 'guests', 'time', 'details', 'extra'];
-const STEP_LABELS = { date: 'תאריך', guests: 'סועדים', time: 'שעה', details: 'פרטים', extra: 'סיום' };
-
-let stepIndex = 0;
 let pageSettings = null;
 let viewMonth, minDate, maxDate;
-let dateWarning = null;
-let guestsWarning = null;
+let warning = null;    // shown under the three boxes
+let found = false;     // there is room for the chosen guests and date: the details form is open
 
-const formData = { date: null, time: null, name: '', phone: '', guests: 2, note: '', bookingId: null, pending: false };
+const formData = { date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
 
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
@@ -324,80 +268,21 @@ async function getSettings() {
   };
 }
 
-function stepValueText(s) {
-  if (s === 'date' && formData.date) return formatDisplay(formData.date);
-  if (s === 'time' && formData.time) return formData.time;
-  if (s === 'guests') return formData.guests + ' סועדים';
-  if (s === 'details' && formData.name) return formData.name;
-  return null;
-}
-
-function renderProgress() {
-  progressEl.innerHTML = STEPS.map((s, i) => {
-    const state = i < stepIndex ? 'done' : i === stepIndex ? 'current' : 'upcoming';
-    const value = state === 'done' ? stepValueText(s) : null;
-    const label = value || STEP_LABELS[s];
-    return state === 'done'
-      ? `<button type="button" class="step-chip done" data-step="${i}">${esc(label)}</button>`
-      : `<span class="step-chip ${state}">${esc(label)}</span>`;
-  }).join('<span class="step-sep">›</span>');
-
-  progressEl.querySelectorAll('.step-chip.done').forEach(btn => {
-    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
-  });
-}
-
-function goNext() {
-  if (stepIndex < STEPS.length - 1) { stepIndex++; renderStep(); }
-}
-function goToStep(i) {
-  stepIndex = i; renderStep();
-}
-
-function summaryParts() {
-  const parts = [];
-  for (let i = 0; i < stepIndex; i++) {
-    const s = STEPS[i];
-    if (s === 'date' && formData.date) parts.push({ text: formatDisplay(formData.date), step: i });
-    else if (s === 'time' && formData.time) parts.push({ text: formData.time, step: i });
-    else if (s === 'details') {
-      if (formData.name) parts.push({ text: formData.name, step: i });
-      if (formData.phone) parts.push({ text: formData.phone, step: i });
-    }
-    else if (s === 'guests') parts.push({ text: formData.guests + ' סועדים', step: i });
-  }
-  return parts;
-}
-function summaryHtml() {
-  const parts = summaryParts();
-  if (!parts.length) return '';
-  return `<div class="summary-chips">${parts.map((p, idx) =>
-    `<button type="button" class="chip-btn" data-step="${p.step}">${esc(p.text)}</button>${idx < parts.length - 1 ? '<span class="chip-sep">·</span>' : ''}`
-  ).join('')}</div>`;
-}
-function bindSummaryClicks() {
-  stepArea.querySelectorAll('.chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
-  });
-}
-
+// One screen, like the big Israeli booking sites (owner, Nov 2026): three boxes
+// (guests, date, time) that open a panel from the bottom, "מצאו לי מקום", and when
+// there is room the name/phone form opens on the same screen. No default values.
 async function init() {
   pageSettings = await getSettings();
-
   const now = israelNow();
-  const minD = fromDateStr(now.date);
-  const maxD = new Date(minD); maxD.setDate(maxD.getDate() + BOOKING_WINDOW_DAYS);
-  minDate = minD; maxDate = maxD;
-
+  minDate = fromDateStr(now.date);
+  maxDate = new Date(minDate); maxDate.setDate(maxDate.getDate() + BOOKING_WINDOW_DAYS);
   const initial = fromDateStr(now.date);
   if (now.time > pageSettings.cutoff) initial.setDate(initial.getDate() + 1);
   viewMonth = new Date(initial.getFullYear(), initial.getMonth(), 1);
-
-  stepIndex = 0;
-  renderStep();
+  renderBooking();
 }
 
-// Upcoming bookings this phone made, shown at the top of the first step.
+// Upcoming bookings this phone made, shown at the top of the page.
 function myBookingsHtml() {
   const mine = myBookings().filter(b => b.date >= todayStr()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   return mine.length ? `<div class="my-bookings" id="myBookings">
@@ -406,93 +291,170 @@ function myBookingsHtml() {
     </div>` : '';
 }
 
-function renderStep() {
-  renderProgress();
-  const step = STEPS[stepIndex];
-  if (step === 'date') renderDateStep();
-  else if (step === 'time') renderTimeStep();
-  else if (step === 'details') renderDetailsStep();
-  else if (step === 'guests') renderGuestsStep();
-  else if (step === 'extra') renderExtraStep();
+function dateLabel(dStr) { return `${WEEKDAY_LETTERS[fromDateStr(dStr).getDay()]}׳ ${formatDisplay(dStr)}`; }
+function closedToday(dStr) { const now = israelNow(); return dStr === now.date && now.time > pageSettings.cutoff; }
+
+function renderBooking() {
+  closeSheet();
+  const now = israelNow();
+  const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
+  const ready = formData.guests && formData.date && formData.time;
+  const box = (id, label, value) => `<button type="button" class="pick${value ? ' set' : ''}" id="${id}" aria-label="${label}: ${value || 'לא נבחר'}">
+      <span class="pick-value">${value || label}</span><span class="pick-caret" aria-hidden="true">▾</span></button>`;
+  stepArea.innerHTML = `
+    ${myBookingsHtml()}
+    <p class="step-question">הזמנת שולחן</p>
+    <p class="notice" id="indoorNote">הזמנה לישיבה בפנים בלבד.<br>בחוץ ללא הזמנה, לפי מקום פנוי.</p>
+    <div class="pickers">
+      ${box('pickGuests', 'סועדים', formData.guests ? `${formData.guests} סועדים` : '')}
+      ${box('pickDate', 'תאריך', formData.date ? dateLabel(formData.date) : '')}
+      ${box('pickTime', 'שעה', formData.time || '')}
+    </div>
+    ${sameDayApproval ? `<p class="notice" id="approvalNote">הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
+    ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
+    ${found ? detailsHtml() : `<button type="button" class="primary" id="findBtn" ${ready ? '' : 'disabled'}>מצאו לי מקום</button>`}
+  `;
+  document.getElementById('pickGuests').addEventListener('click', openGuestsSheet);
+  document.getElementById('pickDate').addEventListener('click', openDateSheet);
+  document.getElementById('pickTime').addEventListener('click', openTimeSheet);
+  if (found) bindDetails();
+  else document.getElementById('findBtn').addEventListener('click', findPlace);
+}
+// Any change to guests, date or time means a new search.
+function choiceChanged() { found = false; warning = null; renderBooking(); }
+
+// A panel that slides up from the bottom of the screen (closes on ✕ or a tap outside it).
+function openSheet(title, body, bind) {
+  closeSheet();
+  const el = document.createElement('div');
+  el.className = 'sheet-backdrop'; el.id = 'sheet';
+  el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="${title}">
+    <div class="sheet-head"><span class="sheet-title">${title}</span><button type="button" class="sheet-close" id="sheetClose" aria-label="סגירה">✕</button></div>
+    <div class="sheet-body"></div></div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target === el) closeSheet(); });
+  el.querySelector('#sheetClose').addEventListener('click', closeSheet);
+  const fill = () => { el.querySelector('.sheet-body').innerHTML = body(); bind(el, fill); };
+  fill();
+}
+function closeSheet() { const s = document.getElementById('sheet'); if (s) s.remove(); }
+
+function openGuestsSheet() {
+  openSheet('כמה תהיו?', () => `
+    <div class="choice-grid">${Array.from({ length: 10 }, (_, i) => i + 1).map(n =>
+      `<button type="button" data-guests="${n}" class="${n === formData.guests ? 'selected' : ''}">${n}</button>`).join('')}</div>
+    <p class="hint">עד 10 סועדים</p>`,
+  el => el.querySelectorAll('[data-guests]').forEach(b => b.addEventListener('click', () => {
+    formData.guests = Number(b.dataset.guests); choiceChanged();
+  })));
 }
 
-function renderDateStep() {
+function calendarHtml() {
   const monthLabel = viewMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-  const firstOfMonth = new Date(viewMonth);
-  const startWeekday = firstOfMonth.getDay();
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
-  const prevMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1);
   const nextMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
   const prevDisabled = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 0) < minDate;
   const nextDisabled = nextMonth > maxDate;
-
-  const now = israelNow();
-  const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
   let cells = '';
-  for (let i = 0; i < startWeekday; i++) cells += '<div></div>';
+  for (let i = 0; i < viewMonth.getDay(); i++) cells += '<div></div>';
   for (let day = 1; day <= daysInMonth; day++) {
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
     const dStr = toDateStr(d);
-    const disabled = d < minDate || d > maxDate || (dStr === now.date && now.time > pageSettings.cutoff);
+    const disabled = d < minDate || d > maxDate || closedToday(dStr);
     const classes = [];
     if (dStr === todayStr()) classes.push('today');
     if (dStr === formData.date) classes.push('selected');
     cells += `<button type="button" class="${classes.join(' ')}" data-date="${dStr}" ${disabled ? 'disabled' : ''}>${day}</button>`;
   }
-
-  stepArea.innerHTML = `
-    ${myBookingsHtml()}
-    <p class="step-question">מתי מגיעים?</p>
-    <p class="notice" id="indoorNote">הזמנה לישיבה בפנים בלבד.<br>בחוץ ללא הזמנה, לפי מקום פנוי.</p>
+  return `
     <div class="cal-head">
       <button type="button" class="cal-nav" id="prevMonth" ${prevDisabled ? 'disabled' : ''}>‹</button>
       <span class="cal-month">${monthLabel}</span>
       <button type="button" class="cal-nav" id="nextMonth" ${nextDisabled ? 'disabled' : ''}>›</button>
     </div>
     <div class="cal-weekdays">${WEEKDAY_LETTERS.map(l => `<div>${l}</div>`).join('')}</div>
-    <div class="cal-grid">${cells}</div>
-    ${sameDayApproval ? `<p class="notice" id="approvalNote">הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
-    ${dateWarning ? `<p class="warning">${dateWarning}</p>` : ''}
-    <button type="button" class="primary" id="dateNext" ${formData.date ? '' : 'disabled'}>לבחירת כמות סועדים</button>
-  `;
-
-  document.getElementById('prevMonth').addEventListener('click', () => { viewMonth = prevMonth; renderDateStep(); });
-  document.getElementById('nextMonth').addEventListener('click', () => { viewMonth = nextMonth; renderDateStep(); });
-  stepArea.querySelectorAll('.cal-grid button:not(:disabled)').forEach(btn => {
-    btn.addEventListener('click', () => {
-      dateWarning = null;
-      formData.date = btn.getAttribute('data-date');
-      renderDateStep();
-    });
+    <div class="cal-grid">${cells}</div>`;
+}
+function openDateSheet() {
+  openSheet('מתי מגיעים?', calendarHtml, (el, fill) => {
+    el.querySelector('#prevMonth').addEventListener('click', () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1); fill(); });
+    el.querySelector('#nextMonth').addEventListener('click', () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1); fill(); });
+    el.querySelectorAll('.cal-grid button:not(:disabled)').forEach(b => b.addEventListener('click', () => {
+      formData.date = b.dataset.date;
+      if (formData.time && timeToMinutes(formData.time) < earliestArrival()) formData.time = null;   // too early for today
+      choiceChanged();
+    }));
   });
-  document.getElementById('dateNext').addEventListener('click', checkDateAndContinue);
 }
 
-async function checkDateAndContinue() {
-  const dStr = formData.date;
-  const btn = document.getElementById('dateNext');
+function openTimeSheet() {
+  openSheet('באיזו שעה?', () => {
+    const min = earliestArrival();
+    return `<div class="choice-grid">${timeOptions(pageSettings.start, pageSettings.end).map(t =>
+      `<button type="button" data-time="${t}" class="${t === formData.time ? 'selected' : ''}" ${timeToMinutes(t) < min ? 'disabled' : ''}>${t}</button>`).join('')}</div>
+      <p class="hint">שעת הגעה${formData.date === todayStr() ? ' להיום' : ''}: בין ${minutesToTime(Math.max(min, timeToMinutes(pageSettings.start)))} ל-${pageSettings.end}</p>`;
+  }, el => el.querySelectorAll('[data-time]:not(:disabled)').forEach(b => b.addEventListener('click', () => {
+    formData.time = b.dataset.time; choiceChanged();
+  })));
+}
+
+async function findPlace() {
+  const btn = document.getElementById('findBtn');
   btn.disabled = true;
   btn.textContent = 'בודק זמינות...';
+  // the page may have stayed open: check the clock again
+  if (closedToday(formData.date)) {
+    warning = 'ההזמנות המקוונות ליום זה נסגרו. בחרו תאריך אחר.';
+    formData.date = null; formData.time = null;
+    return renderBooking();
+  }
+  if (timeToMinutes(formData.time) < earliestArrival()) {
+    warning = 'השעה שבחרתם כבר עברה. בחרו שעה מאוחרת יותר.';
+    formData.time = null;
+    return renderBooking();
+  }
+  const { data, error } = await db.rpc('check_availability', { p_date: formData.date, p_guests: formData.guests });
+  if (error) {
+    console.error('Availability check error:', error);
+    warning = 'שגיאה בבדיקת זמינות, נסו שוב.';
+  } else if (!data) {
+    warning = `אין מקום ל-${formData.guests} סועדים בתאריך הזה. נסו תאריך אחר או קבוצה קטנה יותר.`;
+  } else {
+    found = true;
+  }
+  renderBooking();
+  if (found) document.getElementById('details').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-  const now = israelNow();
-  if (dStr === now.date) {
-    if (now.time > pageSettings.cutoff) {
-      dateWarning = 'ההזמנות המקוונות ליום זה נסגרו. נסו תאריך אחר.';
-      formData.date = null;
-      renderDateStep();
-      return;
-    }
-  }
-  const { data: spotsData } = await db.rpc('available_spots', { p_date: dStr });
-  const spots = typeof spotsData === 'number' ? spotsData : 0;
-  if (spots <= 0) {
-    dateWarning = 'אין מקומות פנויים בתאריך הזה. נסו תאריך אחר.';
-    formData.date = null;
-    renderDateStep();
-    return;
-  }
-  guestsWarning = null;
-  goNext();
+function detailsHtml() {
+  return `
+    <div class="details" id="details">
+      <p class="found-title">יש מקום! נשאר רק להשאיר פרטים</p>
+      <div class="field">
+        <label for="nameInput">שם</label>
+        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" maxlength="80" value="${esc(formData.name)}" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="phoneInput">טלפון</label>
+        <input id="phoneInput" type="tel" placeholder="050-0000000" maxlength="20" value="${esc(formData.phone)}" autocomplete="tel">
+      </div>
+      <div class="field">
+        <label for="noteInput">הערה (לא חובה)</label>
+        <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
+      </div>
+      <div class="rules" id="rules">
+        <p>נחכה למאחרים עד 15 דקות משעת ההזמנה. אחר כך לא נוכל להתחייב שהמקום יישמר לכם 🙏</p>
+        <p>הקדמתם? ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
+      </div>
+      <div id="submitError" class="error" style="display:none;"></div>
+      <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
+    </div>`;
+}
+function bindDetails() {
+  // what is typed is kept if the customer changes a choice and searches again
+  for (const [id, key] of [['nameInput', 'name'], ['phoneInput', 'phone'], ['noteInput', 'note']])
+    document.getElementById(id).addEventListener('input', e => { formData[key] = e.target.value; });
+  document.getElementById('submitBtn').addEventListener('click', submitBooking);
 }
 
 function timeToMinutes(t) {
@@ -512,155 +474,16 @@ function earliestArrival() {
   if (formData.date === now.date) min = Math.max(min, Math.ceil((timeToMinutes(now.time) + 30) / 15) * 15);
   return min;
 }
-function renderTimeStep() {
-  const minMin = earliestArrival();
-  if (!formData.time || timeToMinutes(formData.time) < minMin) formData.time = minutesToTime(minMin);
-  const maxMin = timeToMinutes(pageSettings.end);
-  const curMin = timeToMinutes(formData.time);
-
-  stepArea.innerHTML = `
-    <p class="step-question">באיזו שעה תרצו להגיע?</p>
-    <div class="stepper">
-      <button type="button" id="timeMinus" ${curMin <= minMin ? 'disabled' : ''}>−</button>
-      <span class="stepper-value" id="timeValue">${formData.time}</span>
-      <button type="button" id="timePlus" ${curMin >= maxMin ? 'disabled' : ''}>+</button>
-    </div>
-    <p class="hint">בין ${minutesToTime(minMin)} ל-${pageSettings.end}</p>
-    <button type="button" class="primary" id="timeNext">לפרטים האישיים</button>
-  `;
-  document.getElementById('timeMinus').addEventListener('click', () => {
-    const m = timeToMinutes(formData.time);
-    if (m > minMin) { formData.time = minutesToTime(m - 15); renderTimeStep(); }
-  });
-  document.getElementById('timePlus').addEventListener('click', () => {
-    const m = timeToMinutes(formData.time);
-    if (m < maxMin) { formData.time = minutesToTime(m + 15); renderTimeStep(); }
-  });
-  document.getElementById('timeNext').addEventListener('click', goNext);
-}
-
-function renderDetailsStep() {
-  stepArea.innerHTML = `
-    <p class="step-question">על איזה שם ומספר טלפון ההזמנה?</p>
-    <form id="detailsForm">
-      <div class="field">
-        <label for="nameInput">שם</label>
-        <input id="nameInput" type="text" placeholder="שם פרטי ושם משפחה" maxlength="80" value="${esc(formData.name)}" required autofocus>
-      </div>
-      <div class="field">
-        <label for="phoneInput">טלפון</label>
-        <input id="phoneInput" type="tel" placeholder="050-0000000" maxlength="20" value="${esc(formData.phone)}" required>
-      </div>
-      <div id="detailsError" class="error" style="display:none;"></div>
-      <button type="submit" class="primary">לסיכום ההזמנה</button>
-    </form>
-  `;
-  document.getElementById('detailsForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = document.getElementById('nameInput').value.trim();
-    const phone = document.getElementById('phoneInput').value.trim();
-    const problem = !name || !phone ? 'נא למלא שם וטלפון.' : !PHONE_OK.test(phone) ? 'מספר הטלפון לא תקין.' : null;
-    if (problem) {
-      const err = document.getElementById('detailsError');
-      err.textContent = problem;
-      err.style.display = 'block';
-      return;
-    }
-    formData.name = name;
-    formData.phone = phone;
-    goNext();
-  });
-}
-
-function renderGuestsStep() {
-  stepArea.innerHTML = `
-    <p class="step-question">כמה תהיו?</p>
-    <div class="stepper">
-      <button type="button" id="guestsMinus" ${formData.guests <= 1 ? 'disabled' : ''}>−</button>
-      <span class="stepper-value" id="guestsValue">${formData.guests}</span>
-      <button type="button" id="guestsPlus" ${formData.guests >= 10 ? 'disabled' : ''}>+</button>
-    </div>
-    <p class="hint">עד 10 סועדים</p>
-    <button type="button" class="primary" id="guestsNext">לבחירת שעה</button>
-    ${guestsWarning ? `<p class="warning">${guestsWarning}</p>` : ''}
-  `;
-  const valueEl = document.getElementById('guestsValue');
-  document.getElementById('guestsMinus').addEventListener('click', () => {
-    if (formData.guests > 1) { formData.guests--; renderGuestsStep(); }
-  });
-  document.getElementById('guestsPlus').addEventListener('click', () => {
-    if (formData.guests < 10) { formData.guests++; renderGuestsStep(); }
-  });
-  document.getElementById('guestsNext').addEventListener('click', checkGuestsAndContinue);
-}
-
-async function checkGuestsAndContinue() {
-  guestsWarning = null;
-  const btn = document.getElementById('guestsNext');
-  btn.disabled = true;
-  btn.textContent = 'בודק זמינות...';
-
-  const { data, error } = await db.rpc('check_availability', { p_date: formData.date, p_guests: formData.guests });
-
-  if (error) {
-    console.error('Availability check error:', error);
-    guestsWarning = 'שגיאה בבדיקת זמינות, נסו שוב.';
-    renderGuestsStep();
-    return;
-  }
-
-  if (!data) {
-    guestsWarning = 'אין מקום מתאים לקבוצה בגודל הזה בתאריך שבחרתם. נסו תאריך אחר או קבוצה קטנה יותר.';
-    renderGuestsStep();
-    return;
-  }
-
-  goNext();
-}
-
-function fullSummaryHtml() {
-  const rows = [
-    ['תאריך', formatDisplay(formData.date), STEPS.indexOf('date')],
-    ['שעה', formData.time, STEPS.indexOf('time')],
-    ['סועדים', formData.guests, STEPS.indexOf('guests')],
-    ['שם', formData.name, STEPS.indexOf('details')],
-    ['טלפון', formData.phone, STEPS.indexOf('details')]
-  ];
-  return `<div class="summary-box">${rows.map(([label, value, step]) =>
-    `<button type="button" class="summary-row" data-step="${step}"><span class="summary-label">${label}</span><span class="summary-value">${esc(value)}</span></button>`
-  ).join('')}</div>`;
-}
-function bindFullSummaryClicks() {
-  stepArea.querySelectorAll('.summary-row').forEach(btn => {
-    btn.addEventListener('click', () => goToStep(parseInt(btn.getAttribute('data-step'), 10)));
-  });
-}
-
-function renderExtraStep() {
-  stepArea.innerHTML = `
-    <p class="step-question">פרטי ההזמנה</p>
-    ${fullSummaryHtml()}
-    <div class="field">
-      <label for="noteInput">הערה (לא חובה)</label>
-      <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
-    </div>
-    <div class="rules" id="rules">
-      <p>נחכה למאחרים עד 15 דקות משעת ההזמנה. אחר כך לא נוכל להתחייב שהמקום יישמר לכם 🙏</p>
-      <p>הקדמתם? ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
-    </div>
-    <div id="submitError" class="error" style="display:none;"></div>
-    <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
-  `;
-  bindFullSummaryClicks();
-  document.getElementById('submitBtn').addEventListener('click', submitBooking);
-}
 
 async function submitBooking() {
-  formData.note = document.getElementById('noteInput').value.trim();
-
   const btn = document.getElementById('submitBtn');
   const errEl = document.getElementById('submitError');
   errEl.style.display = 'none';
+  formData.name = document.getElementById('nameInput').value.trim();
+  formData.phone = document.getElementById('phoneInput').value.trim();
+  formData.note = document.getElementById('noteInput').value.trim();
+  const problem = !formData.name || !formData.phone ? 'נא למלא שם וטלפון.' : !PHONE_OK.test(formData.phone) ? 'מספר הטלפון לא תקין.' : null;
+  if (problem) { errEl.textContent = problem; errEl.style.display = 'block'; return; }
   btn.disabled = true;
   btn.textContent = 'שולח...';
 
@@ -695,7 +518,6 @@ async function submitBooking() {
     shareText = `${pending ? 'בקשת הזמנה (ממתינה לאישור)' : 'אישור הזמנה'} - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
       + (token ? `\nלצפייה, שינוי או ביטול: ${bookingUrl(token)}` : '');
     const waText = encodeURIComponent(shareText);
-    progressEl.innerHTML = '';
     stepArea.innerHTML = `
       <div class="success">
         <img class="card-preview" id="cardPreview" hidden
@@ -716,16 +538,11 @@ async function submitBooking() {
     `;
     if (!pending && !IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
     prepareCard();
-  } else if (result === 'full') {
-    stepIndex = 0;
-    dateWarning = 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.';
+  } else if (result === 'full' || result === 'closed') {
+    found = false;
+    warning = result === 'full' ? 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.' : 'ההזמנות המקוונות לתאריך הזה נסגרו.';
     formData.date = null;
-    renderStep();
-  } else if (result === 'closed') {
-    stepIndex = 0;
-    dateWarning = 'ההזמנות המקוונות לתאריך הזה נסגרו.';
-    formData.date = null;
-    renderStep();
+    renderBooking();
   } else {
     errEl.textContent = result === 'invalid' ? 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.'
       : 'השעה שבחרתם כבר לא זמינה. לחצו על השעה למעלה ובחרו שעה מאוחרת יותר.';
@@ -747,7 +564,7 @@ function cardData() {
 let cardFile = null, shareText = '';
 
 // The customer's private booking link, and the bookings this phone remembers, so a
-// customer who closed the page can find their booking again (shown on the welcome screen).
+// customer who closed the page can find their booking again (shown at the top of the page).
 const MY_BOOKINGS = 'izabar_my_bookings';
 function bookingUrl(token) { return new URL('booking.html#' + encodeURIComponent(token), location.href).href; }
 function myBookings() {
