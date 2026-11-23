@@ -56,6 +56,12 @@
   .notice { font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: center; margin: -16px 0 20px; }
   #approvalNote { margin: -6px 0 14px; color: var(--ink); }
 
+  /* Table or bar */
+  .seating { display: grid; grid-template-columns: 1fr 1fr; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 12px; }
+  .seating button { all: unset; box-sizing: border-box; text-align: center; padding: 11px 0; border-radius: 9px; font-size: 15.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+  .seating button.on { background: var(--accent); color: #fff; }
+  .seating button:focus-visible { outline: 2px solid var(--accent); }
+
   /* The three choice boxes (guests, date, time), side by side */
   .pickers { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--field-border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
   .pick {
@@ -211,13 +217,14 @@ const stepArea = document.getElementById('stepArea');
 const BOOKING_WINDOW_DAYS = 30;
 // Shown to customers only; the database decides (its 'approval_from' setting is private).
 const APPROVAL_FROM = '16:00';
+const BAR_MAX = 4;
 const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 let pageSettings = null;
 let viewMonth, minDate, maxDate;
 let warning = null;    // shown under the three boxes
 let found = false;     // there is room for the chosen guests and date: the details form is open
 
-const formData = { date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
+const formData = { seating: null, date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
 
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
@@ -298,13 +305,17 @@ function renderBooking() {
   closeSheet();
   const now = israelNow();
   const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
-  const ready = formData.guests && formData.date && formData.time;
+  const ready = formData.seating && formData.guests && formData.date && formData.time;
   const box = (id, label, value) => `<button type="button" class="pick${value ? ' set' : ''}" id="${id}" aria-label="${label}: ${value || 'לא נבחר'}">
       <span class="pick-value">${value || label}</span><span class="pick-caret" aria-hidden="true">▾</span></button>`;
   stepArea.innerHTML = `
     ${myBookingsHtml()}
     <p class="step-question">הזמנת שולחן</p>
     <p class="notice" id="indoorNote">הזמנה לישיבה בפנים בלבד.<br>בחוץ ללא הזמנה, לפי מקום פנוי.</p>
+    <div class="seating" role="radiogroup" aria-label="איפה לשבת?">
+      <button type="button" role="radio" aria-checked="${formData.seating === 'table'}" class="${formData.seating === 'table' ? 'on' : ''}" data-seating="table">שולחן</button>
+      <button type="button" role="radio" aria-checked="${formData.seating === 'bar'}" class="${formData.seating === 'bar' ? 'on' : ''}" data-seating="bar">בר</button>
+    </div>
     <div class="pickers">
       ${box('pickGuests', 'סועדים', formData.guests ? `${formData.guests} סועדים` : '')}
       ${box('pickDate', 'תאריך', formData.date ? dateLabel(formData.date) : '')}
@@ -314,6 +325,11 @@ function renderBooking() {
     ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
     ${found ? detailsHtml() : `<button type="button" class="primary" id="findBtn" ${ready ? '' : 'disabled'}>מצאו לי מקום</button>`}
   `;
+  stepArea.querySelectorAll('[data-seating]').forEach(b => b.addEventListener('click', () => {
+    formData.seating = b.dataset.seating;
+    if (formData.seating === 'bar' && formData.guests > BAR_MAX) formData.guests = null;   // the bar takes groups of up to 4
+    choiceChanged();
+  }));
   document.getElementById('pickGuests').addEventListener('click', openGuestsSheet);
   document.getElementById('pickDate').addEventListener('click', openDateSheet);
   document.getElementById('pickTime').addEventListener('click', openTimeSheet);
@@ -341,9 +357,9 @@ function closeSheet() { const s = document.getElementById('sheet'); if (s) s.rem
 
 function openGuestsSheet() {
   openSheet('כמה תהיו?', () => `
-    <div class="choice-grid">${Array.from({ length: 10 }, (_, i) => i + 1).map(n =>
+    <div class="choice-grid">${Array.from({ length: formData.seating === 'bar' ? BAR_MAX : 10 }, (_, i) => i + 1).map(n =>
       `<button type="button" data-guests="${n}" class="${n === formData.guests ? 'selected' : ''}">${n}</button>`).join('')}</div>
-    <p class="hint">עד 10 סועדים</p>`,
+    <p class="hint">${formData.seating === 'bar' ? `בבר: עד ${BAR_MAX} סועדים` : 'עד 10 סועדים'}</p>`,
   el => el.querySelectorAll('[data-guests]').forEach(b => b.addEventListener('click', () => {
     formData.guests = Number(b.dataset.guests); choiceChanged();
   })));
