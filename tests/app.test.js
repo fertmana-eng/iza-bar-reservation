@@ -76,18 +76,20 @@ describe('customer booking page',()=>{
     assert.equal(await page.inputValue('#nameInput'),'דנה כהן');
     assert.equal(await page.inputValue('#phoneInput'),'050-1234567');await ctx.close();
   });
-  test('picking today between 16:00 and 20:00 says it waits for approval; other days do not',async()=>{
-    const {page,ctx}=await open({time:'2026-11-22T17:00:00+02:00'});
-    assert.equal(await page.isVisible('#approvalNote'),false);
-    await choose(page,{guests:null,time:null,date:'2026-11-22'});
-    assert.equal(await text(page,'#approvalNote'),'⏳ הזנת הזמנה בשעה זו מצריכה אישור שלנו. נחזור אליכם בהקדם');
-    // stands out in the tablet's "waiting for approval" colours (owner, Nov 2026)
+  // Owner, Nov 2026: the approval note is shown at the end of the process, on the confirmation screen only
+  test('a request waiting for approval shows the approval note on the confirmation screen only',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T17:00:00+02:00',cfg:{bookResult:'pending'}});
+    await fillBooking(page,{date:'2026-11-22',time:'19:00'});
+    assert.equal(await page.isVisible('#approvalNote'),false,'not on the booking screen');
+    await page.click('#submitBtn');await page.waitForSelector('.success');
+    assert.equal(await text(page,'#approvalNote'),'⏳ הזנת הזמנה בשעה זו מחייבת אישור שלנו, נעדכן אתכם בהקדם!');
+    // stands out in the tablet's "waiting for approval" colours
     assert.deepEqual(await page.evaluate(()=>{const c=getComputedStyle(approvalNote);return [c.backgroundColor,c.color];}),['rgb(255, 250, 240)','rgb(138, 90, 0)']);
-    await choose(page,{guests:null,time:null,date:'2026-11-25'});
-    assert.equal(await page.isVisible('#approvalNote'),false);await ctx.close();
-    const morning=await open({time:MORNING});
-    await choose(morning.page,{guests:null,time:null,date:'2026-11-22'});
-    assert.equal(await morning.page.isVisible('#approvalNote'),false);await morning.ctx.close();
+    await ctx.close();
+    const confirmed=await open({time:MORNING});
+    await fillBooking(confirmed.page);await confirmed.page.click('#submitBtn');await confirmed.page.waitForSelector('.success');
+    assert.equal(await confirmed.page.isVisible('#approvalNote'),false,'a confirmed booking has no approval note');
+    await confirmed.ctx.close();
   });
   test('a full booking sends the right details and shows the confirmation',async()=>{
     const {page,ctx,errors}=await open({time:MORNING});
