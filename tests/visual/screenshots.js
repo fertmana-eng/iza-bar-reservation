@@ -6,7 +6,7 @@ const path=require('path'),fs=require('fs');
 const {chromium,startServer,openPage}=require('../helpers');
 const OUT=path.resolve(process.argv[2]||path.join(__dirname,'out/shots'));fs.mkdirSync(OUT,{recursive:true});
 const TIME='2026-11-22T10:00:00+02:00';
-const toDetails=async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');
+const toDetails=async p=>{await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');
   await p.waitForSelector('#guestsNext');await p.click('#guestsNext');await p.waitForSelector('#timeNext');await p.click('#timeNext');};
 const toSummary=async p=>{await toDetails(p);await p.fill('#nameInput','דנה כהן');await p.fill('#phoneInput','050-1234567');
   await p.click('#detailsForm button[type=submit]');await p.waitForSelector('#submitBtn');};
@@ -15,11 +15,10 @@ const RES=[{id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_
 const TOK='11111111-2222-4333-8444-555555555555';
 const BK=(x={})=>({access_token:TOK,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...x});
 const STATES=[
- ['intro',async p=>{}],
- ['intro-mine',async p=>{},{},undefined,{init:()=>localStorage.setItem('izabar_my_bookings',JSON.stringify([{token:'11111111-2222-4333-8444-555555555555',date:'2026-11-25',time:'19:00',guests:3}]))}],
- ['date',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');}],
- ['date-full',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForTimeout(200);},{spots:0}],
- ['guests',async p=>{await p.click('#introNext');await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForSelector('#guestsNext');}],
+ ['date-mine',async p=>{},{},undefined,{init:()=>localStorage.setItem('izabar_my_bookings',JSON.stringify([{token:'11111111-2222-4333-8444-555555555555',date:'2026-11-25',time:'19:00',guests:3}]))}],
+ ['date',async p=>{await p.click('.cal-grid button[data-date="2026-11-25"]');}],
+ ['date-full',async p=>{await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForTimeout(200);},{spots:0}],
+ ['guests',async p=>{await p.click('.cal-grid button[data-date="2026-11-25"]');await p.click('#dateNext');await p.waitForSelector('#guestsNext');}],
  ['time',async p=>{await toDetails(p);await p.click('.progress .step-chip.done[data-step="2"]');}],
  ['details',toDetails],
  ['summary',toSummary],

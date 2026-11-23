@@ -28,13 +28,18 @@ Same owner as the IzaZoo management app (repository
   (Sept 2026), uploaded to GitHub in one go, moved to Claude Code in Nov 2026.
   **Not live for customers yet** (owner, Nov 2026).
 - `index.html`: the public booking page (the link sent to customers). Steps:
-  welcome text → date (up to 30 days ahead) → number of guests (1–10) →
+  date (up to 30 days ahead) → number of guests (1–10) →
   arrival time (17:00–21:00, 15-minute steps) → name and phone → summary with
   optional note → confirmation with "send to my WhatsApp" and "add
   to calendar". The confirmation screen shows only the booking card picture
   (owner: no double presentation); plain text only if the picture can't be
-  drawn. Outdoor seating can't be booked (walk-in only), as the welcome
-  text says.
+  drawn. **No welcome screen** (owner, 23 Nov 2026): the page opens on the
+  calendar; each rule is shown where it matters: "ההזמנות שלי" and an
+  indoor-only line (outdoor is walk-in only) above the calendar, a
+  same-day approval note when today is picked between 16:00 and 20:00
+  (`APPROVAL_FROM`, display only; the database decides), today greyed out
+  from 20:00, and the late (15 min) / early arrival rules on the summary
+  above "שריינו לי שולחן".
 - **Same-day bookings by the hour they are made** (owner's decision, 22 Nov
   2026; `09_approval_window.sql`): before 16:00 confirmed at once; 16:00–20:00
   the request is `pending` and holds its table until the manager approves
@@ -194,8 +199,8 @@ Same owner as the IzaZoo management app (repository
    link is the caption of the shared card picture (Android's WhatsApp keeps
    it; some iPhones drop it), it's in the text-message fallback and in the
    manager's approval message, and the phone remembers its upcoming bookings
-   (`izabar_my_bookings` in local storage; shown as "ההזמנות שלי" on the
-   welcome screen; opening a link adds it, cancelling removes it).
+   (`izabar_my_bookings` in local storage; shown as "ההזמנות שלי" above
+   the calendar; opening a link adds it, cancelling removes it).
    On the owner's phone WhatsApp dropped the caption, so the picture arrived
    without the link: fixed with a second button "שליחת הקישור להזמנה
    לוואטסאפ" (plain wa.me text, which always keeps the link; shown only where
@@ -280,7 +285,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (71 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (73 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
