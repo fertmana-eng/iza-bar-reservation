@@ -123,8 +123,10 @@ Same owner as the IzaZoo management app (repository
   (23 Nov 2026).** All values live in the shared `assets/theme.css` (named
   settings: colours, `--fs-*` sizes, `--w-*` boldness, `--r-*` corners,
   `--btn-height`); pages use the names, never raw numbers. Brought into line
-  one page at a time, each checked live by the owner: **booking page done
-  (23 Nov 2026)**; personal page next, then the manager page. New work follows `DESIGN.md`. Owner, 23 Nov
+  one page at a time, each checked live by the owner: **booking page and
+  personal page done (23 Nov 2026)**; the manager page next. The customer
+  pages' header (IZAZOO // עיזה בר, centred, line underneath, stays at the
+  top) is defined once, in theme.css. New work follows `DESIGN.md`. Owner, 23 Nov
   2026: will work more on the overall design first; the health check (first
   one for this project, offered after ~25 changes) comes later, after that.
   The IzaZoo management app is on hold (owner), so the quicker-checks rule

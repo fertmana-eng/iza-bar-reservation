@@ -46,3 +46,18 @@
   /* buttons */
   --btn-height: 46px;
 }
+
+/* The header, identical on the customer pages: IZAZOO // עיזה בר, centred, with a line
+   underneath, staying at the top while scrolling. */
+.header-band {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--paper); border-bottom: 1px solid var(--line);
+  padding: 14px 20px; text-align: center;
+}
+.title-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.venue-name { margin: 0; }
+.venue-logo { display: block; height: 24px; width: auto; }
+.slash-big { font-weight: var(--w-semi); font-size: var(--fs-brand-slash); line-height: 24px; color: var(--muted);
+  display: block; position: relative; top: 1px; }
+.venue-tag { color: var(--muted); font-weight: var(--w-bold); font-size: var(--fs-brand); line-height: 24px;
+  white-space: nowrap; display: block; }
