@@ -172,6 +172,7 @@
 <!-- =================================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/back.js"></script>
 <script>
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -216,6 +217,7 @@ async function start() {
 }
 
 function renderLogin() {
+  syncBack();
   app.innerHTML = `
     <div class="login-wrap">
       <img class="brand-logo login-logo" src="assets/izazoo-logo-red.png" alt="IZAZOO" width="196" height="28">
@@ -413,6 +415,7 @@ function planSvg(d) {
 // ---------- loading and drawing the evening ----------
 let lastData = null;
 async function renderList(quiet) {
+  syncBack();
   const content = document.getElementById('listContent');
   if (!content) return;
   if (!quiet) content.innerHTML = `<p>טוען הזמנות...</p>`;
@@ -541,11 +544,20 @@ function openPanel(html) {
   const o = document.createElement('div');
   o.className = 'overlay'; o.id = 'overlay';
   o.innerHTML = `<div class="panel" id="panel" role="dialog"><button type="button" class="close" id="panelClose" aria-label="סגירה">×</button>${html}</div>`;
-  o.addEventListener('click', e => { if (e.target === o) closePanel(); });
+  o.addEventListener('click', e => { if (e.target === o) { closePanel(); syncBack(); } });
   document.body.appendChild(o);
-  document.getElementById('panelClose').addEventListener('click', closePanel);
+  document.getElementById('panelClose').addEventListener('click', () => { closePanel(); syncBack(); });
+  syncBack();
 }
 function closePanel() { document.getElementById('overlay')?.remove(); }
+// The back button, one step at a time: an open panel closes; choosing a table to move a
+// booking to is cancelled. On the main screen back leaves the app as usual.
+const syncBack = backSteps(
+  () => (document.getElementById('overlay') || moving ? 1 : 0),
+  () => {
+    if (document.getElementById('overlay')) closePanel();
+    else if (moving) { moving = null; renderList(true); }
+  });
 
 function openBooking(r) {
   const pending = r.status === 'pending';

@@ -132,6 +132,18 @@ Same owner as the IzaZoo management app (repository
   one for this project, offered after ~25 changes) comes later, after that.
   The IzaZoo management app is on hold (owner), so the quicker-checks rule
   was not copied there.
+- **The phone's back button goes back one step** (owner, 23 Nov 2026), via
+  `assets/back.js` (`backSteps(levels, stepBack)`; each page says how deep its
+  screen is and what one back does; the page calls `syncBack()` after every
+  screen change, and the history is kept at that depth: entries added only
+  after taps, because Chrome skips entries added without one, and removed
+  when a screen is closed by a button). Booking page: an open panel closes →
+  the details form closes (choices kept) → after a booking, back gives a
+  fresh empty search ("ההזמנות שלי" shows the new booking). Manager page: the
+  side panel closes; choosing a table to move to is cancelled. On a main
+  screen back leaves the app as usual (no "exit?" question). The personal
+  page has no inner screens; opened from "ההזמנות שלי", back returns to the
+  booking page by itself.
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
@@ -413,7 +425,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (85 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (88 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes that should not change the look** (clean-ups):
   `tests/visual/screenshots.js` before and after, then `tests/visual/compare.js`
