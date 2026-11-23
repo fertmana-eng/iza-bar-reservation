@@ -103,16 +103,21 @@ describe('customer booking page',()=>{
     assert.deepEqual(errors,[]);await ctx.close();
   });
   // Table or bar (owner, Nov 2026)
-  test('choosing the bar limits the group to 4 and books at the bar; the card says so',async()=>{
+  // Owner, Nov 2026: the number of guests is never changed for the customer; a message explains the bar's limit
+  test('the bar takes up to 4: a bigger group keeps its number and is told; booking at the bar; the card says so',async()=>{
     const {page,ctx,errors}=await open({time:MORNING});
-    await choose(page,{seating:'table',guests:6,date:null,time:null});
+    await choose(page,{seating:'table',guests:6});
     await page.click('[data-seating="bar"]');
-    assert.match(await text(page,'#pickGuests'),/^סועדים/,'6 guests can not sit at the bar: cleared');
+    assert.match(await text(page,'#pickGuests'),/^6 סועדים/,'the number is not changed');
+    assert.equal(await text(page,'#barLimit'),'בבר אפשר עד 4 סועדים. הקטינו את מספר הסועדים או בחרו שולחן.');
+    assert.equal(await page.isDisabled('#findBtn'),true);
+    await page.click('[data-seating="table"]');
+    assert.equal(await page.isVisible('#barLimit'),false);assert.equal(await page.isEnabled('#findBtn'),true);
+    await page.click('[data-seating="bar"]');
     await page.click('#pickGuests');
-    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#sheet [data-guests]')].map(b=>+b.dataset.guests)),[1,2,3,4]);
-    assert.match(await text(page,'#sheet .hint'),/בבר: עד 4 סועדים בהזמנה/);
+    assert.equal(await page.evaluate(()=>document.querySelectorAll('#sheet [data-guests]').length),10);
     await page.click('#sheet [data-guests="2"]');
-    await choose(page,{seating:null,guests:null});
+    assert.equal(await page.isVisible('#barLimit'),false);
     await page.click('#findBtn');await page.waitForSelector('#submitBtn');
     assert.equal((await rpcCalls(page,'check_availability'))[0].args.p_seating,'bar');
     await page.fill('#nameInput','דנה כהן');await page.fill('#phoneInput','050-1234567');
