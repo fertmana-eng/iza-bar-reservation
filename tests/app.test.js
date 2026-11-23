@@ -15,49 +15,77 @@ const open=opts=>openPage(browser,server.url,opts);
 const MORNING='2026-11-22T10:00:00+02:00';
 const rpcCalls=(page,name)=>page.evaluate(n=>__ops.filter(o=>o.rpc===n),name);
 
-// Walk through the booking steps up to the summary screen
-async function fillBooking(page,{date='2026-11-25',extraGuests=1,laterBy=1}={}){
-  await page.click(`.cal-grid button[data-date="${date}"]`);
-  await page.click('#dateNext');await page.waitForSelector('#guestsNext');
-  for(let i=0;i<extraGuests;i++)await page.click('#guestsPlus');
-  await page.click('#guestsNext');await page.waitForSelector('#timeNext');
-  for(let i=0;i<laterBy;i++)await page.click('#timePlus');
-  await page.click('#timeNext');
-  await page.fill('#nameInput','דנה כהן');await page.fill('#phoneInput','050-1234567');
-  await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
+// The one-screen booking page: pick guests, date and time in the bottom panels
+async function choose(page,{guests=3,date='2026-11-25',time='17:15'}={}){
+  if(guests){await page.click('#pickGuests');await page.click(`#sheet [data-guests="${guests}"]`);}
+  if(date){await page.click('#pickDate');await page.click(`#sheet .cal-grid button[data-date="${date}"]`);}
+  if(time){await page.click('#pickTime');await page.click(`#sheet [data-time="${time}"]`);}
 }
+// ...then search and fill the name and phone, up to the confirm button
+async function fillBooking(page,opts={}){
+  await choose(page,opts);
+  await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+  await page.fill('#nameInput','דנה כהן');await page.fill('#phoneInput','050-1234567');
+}
+const openCalendar=async page=>{await page.click('#pickDate');await page.waitForSelector('#sheet .cal-grid');};
 
 describe('customer booking page',()=>{
-  // Owner, Nov 2026: no welcome screen; each rule is shown where it matters.
-  test('opens straight on the calendar, with the indoor-only note',async()=>{
+  // Owner, Nov 2026: one screen like the big booking sites, no default values,
+  // and each rule shown where it matters.
+  test('opens on one screen with three empty boxes, the indoor-only note and a search button',async()=>{
     const {page,ctx,errors}=await open({time:MORNING});
-    assert.match(await text(page,'#stepArea'),/^מתי מגיעים\?/);
     assert.equal(await text(page,'#indoorNote'),'הזמנה לישיבה בפנים בלבד. בחוץ ללא הזמנה, לפי מקום פנוי.');
-    assert.equal(await page.isVisible('#introNext'),false);
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim())),['סועדים ▾','תאריך ▾','שעה ▾']);
+    assert.equal(await page.isDisabled('#findBtn'),true,'nothing chosen yet');
+    assert.equal(await page.isVisible('#nameInput'),false);
+    await choose(page);
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim())),['3 סועדים ▾','ד׳ 25.11 ▾','17:15 ▾']);
+    assert.equal(await page.isDisabled('#findBtn'),false);
+    assert.equal(await page.isVisible('#sheet'),false,'each panel closes after a choice');
+    assert.equal((await rpcCalls(page,'check_availability')).length,0,'nothing is checked before the search');
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  test('picking today between 16:00 and 20:00 says it waits for approval; other days do not',async()=>{
-    const {page,ctx}=await open({time:'2026-11-22T17:00:00+02:00'});
-    assert.equal(await page.isVisible('#approvalNote'),false);
-    await page.click('.cal-grid button[data-date="2026-11-22"]');
-    assert.equal(await text(page,'#approvalNote'),'הזמנה להיום אחרי 16:00 ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.');
-    await page.click('.cal-grid button[data-date="2026-11-25"]');
-    assert.equal(await page.isVisible('#approvalNote'),false);await ctx.close();
-    const morning=await open({time:MORNING});
-    await morning.page.click('.cal-grid button[data-date="2026-11-22"]');
-    assert.equal(await morning.page.isVisible('#approvalNote'),false);await morning.ctx.close();
-  });
-  test('the summary shows the late and early arrival rules above the confirm button',async()=>{
+  test('a panel closes with ✕ or a tap outside it, without changing anything',async()=>{
     const {page,ctx}=await open({time:MORNING});
-    await fillBooking(page);
+    await page.click('#pickGuests');await page.click('#sheetClose');
+    assert.equal(await page.isVisible('#sheet'),false);
+    await page.click('#pickTime');await page.mouse.click(10,10);
+    assert.equal(await page.isVisible('#sheet'),false);
+    assert.equal(await page.isDisabled('#findBtn'),true);await ctx.close();
+  });
+  test('when there is room, the details form opens on the same screen with the arrival rules above the button',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await choose(page);await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    assert.deepEqual((await rpcCalls(page,'check_availability')).map(c=>c.args),[{p_date:'2026-11-25',p_guests:3}]);
+    assert.equal(await text(page,'.found-title'),'יש מקום! נשאר רק להשאיר פרטים');
     assert.equal(await text(page,'#rules'),'נחכה למאחרים עד 15 דקות משעת ההזמנה. אחר כך לא נוכל להתחייב שהמקום יישמר לכם 🙏 הקדמתם? ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.');
     assert.ok(await page.evaluate(()=>document.getElementById('rules').compareDocumentPosition(document.getElementById('submitBtn'))&Node.DOCUMENT_POSITION_FOLLOWING));
     await ctx.close();
   });
+  test('changing a choice after the search closes the form and asks to search again, keeping what was typed',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await fillBooking(page);
+    await page.click('#pickGuests');await page.click('#sheet [data-guests="5"]');
+    assert.equal(await page.isVisible('#submitBtn'),false);
+    assert.equal(await page.isEnabled('#findBtn'),true);
+    await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    assert.equal(await page.inputValue('#nameInput'),'דנה כהן');
+    assert.equal(await page.inputValue('#phoneInput'),'050-1234567');await ctx.close();
+  });
+  test('picking today between 16:00 and 20:00 says it waits for approval; other days do not',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T17:00:00+02:00'});
+    assert.equal(await page.isVisible('#approvalNote'),false);
+    await choose(page,{guests:null,time:null,date:'2026-11-22'});
+    assert.equal(await text(page,'#approvalNote'),'הזמנה להיום אחרי 16:00 ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.');
+    await choose(page,{guests:null,time:null,date:'2026-11-25'});
+    assert.equal(await page.isVisible('#approvalNote'),false);await ctx.close();
+    const morning=await open({time:MORNING});
+    await choose(morning.page,{guests:null,time:null,date:'2026-11-22'});
+    assert.equal(await morning.page.isVisible('#approvalNote'),false);await morning.ctx.close();
+  });
   test('a full booking sends the right details and shows the confirmation',async()=>{
     const {page,ctx,errors}=await open({time:MORNING});
     await fillBooking(page);
-    assert.match(await text(page,'.summary-box'),/25\.11.*17:15.*3.*דנה כהן.*050-1234567/);
     await page.fill('#noteInput','יום הולדת');
     await page.click('#submitBtn');await page.waitForSelector('.success');
     const [call]=await rpcCalls(page,'book_reservation');
@@ -107,20 +135,6 @@ describe('customer booking page',()=>{
   });
   // Same-day rules by the hour of booking (owner, Nov 2026): before 16:00 confirmed,
   // 16:00-20:00 waits for approval, from 20:00 closed; arrivals at least 30 minutes ahead.
-  test('for today, the earliest arrival is 30 minutes from now, rounded up to a quarter hour',async()=>{
-    const {page,ctx}=await open({time:'2026-11-22T18:40:00+02:00'});
-    await page.click('.cal-grid button[data-date="2026-11-22"]');await page.click('#dateNext');
-    await page.waitForSelector('#guestsNext');await page.click('#guestsNext');await page.waitForSelector('#timeNext');
-    assert.equal(await text(page,'#timeValue'),'19:15');
-    assert.equal(await page.isDisabled('#timeMinus'),true);
-    assert.match(await text(page,'.hint'),/בין 19:15 ל-21:00/);
-    // another day starts at the usual 17:00
-    await page.click('.progress .step-chip.done[data-step="0"]');await page.click('.cal-grid button[data-date="2026-11-23"]');
-    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');await page.waitForSelector('#timeNext');
-    assert.equal(await text(page,'#timeValue'),'19:15','keeps the chosen time');
-    await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');await page.click('#timeMinus');
-    assert.equal(await text(page,'#timeValue'),'17:00');await ctx.close();
-  });
   test('a request waiting for approval gets its own card, without "add to calendar"',async()=>{
     const {page,ctx,errors}=await open({time:'2026-11-22T17:00:00+02:00',cfg:{bookResult:'pending'}});
     await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
@@ -143,7 +157,7 @@ describe('customer booking page',()=>{
     await fillBooking(second.page);await second.page.click('#submitBtn');await second.page.waitForSelector('.success');
     assert.equal(await second.page.isVisible('#manageLink'),false);await second.ctx.close();
   });
-  test('the phone remembers its bookings: "my bookings" above the calendar',async()=>{
+  test('the phone remembers its bookings: "my bookings" at the top of the page',async()=>{
     const {page,ctx}=await open({time:MORNING});
     assert.equal(await page.isVisible('#myBookings'),false,'nothing before the first booking');
     await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('.success');
@@ -186,33 +200,56 @@ describe('customer booking page',()=>{
     assert.equal(await page.evaluate(()=>israelToUtc('20260610T170000')),'20260610T140000Z');
     await ctx.close();
   });
+  test('for today, times earlier than 30 minutes from now (rounded up to a quarter hour) cannot be picked',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T18:40:00+02:00'});
+    await choose(page,{guests:null,time:null,date:'2026-11-22'});
+    await page.click('#pickTime');
+    assert.equal(await page.isDisabled('#sheet [data-time="19:00"]'),true);
+    assert.equal(await page.isDisabled('#sheet [data-time="19:15"]'),false);
+    assert.match(await text(page,'#sheet .hint'),/להיום: בין 19:15 ל-21:00/);
+    await page.click('#sheet [data-time="19:15"]');
+    // another day starts at the usual 17:00 and keeps the chosen time
+    await choose(page,{guests:null,time:null,date:'2026-11-23'});
+    assert.match(await text(page,'#pickTime'),/19:15/);
+    await page.click('#pickTime');assert.equal(await page.isDisabled('#sheet [data-time="17:00"]'),false);
+    await page.click('#sheet [data-time="17:00"]');
+    // back to today: 17:00 is too early, so the time is cleared
+    await choose(page,{guests:null,time:null,date:'2026-11-22'});
+    assert.match(await text(page,'#pickTime'),/^שעה/);await ctx.close();
+  });
+  test('a time that passed while the page was open is caught by the search',async()=>{
+    const {page,ctx}=await open({time:'2026-11-22T18:40:00+02:00'});
+    await choose(page,{date:'2026-11-22',time:'19:15'});
+    await page.clock.setFixedTime(new Date('2026-11-22T19:00:00+02:00'));
+    await page.click('#findBtn');await page.waitForSelector('#formWarning');
+    assert.match(await text(page,'#formWarning'),/השעה שבחרתם כבר עברה/);
+    assert.match(await text(page,'#pickTime'),/^שעה/);
+    assert.equal((await rpcCalls(page,'check_availability')).length,0);await ctx.close();
+  });
   test('a name or note containing code is shown as plain text, never run',async()=>{
     const {page,ctx,errors}=await open({time:MORNING});
     const evil='"><img src=x onerror="window.__pwned=1">';
-    await page.click('.cal-grid button[data-date="2026-11-25"]');
-    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');
-    await page.waitForSelector('#timeNext');await page.click('#timeNext');
+    await choose(page);await page.click('#findBtn');await page.waitForSelector('#submitBtn');
     await page.fill('#nameInput',evil);await page.fill('#phoneInput','050-1234567');
-    await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
     await page.fill('#noteInput','</textarea><img src=x onerror="window.__pwned=2">');
-    await page.click('.summary-row[data-step="3"]');                 // back to the details step and forward again
+    // change a choice and search again: the typed text is put back into the form
+    await page.click('#pickGuests');await page.click('#sheet [data-guests="4"]');
+    await page.click('#findBtn');await page.waitForSelector('#submitBtn');
     assert.equal(await page.inputValue('#nameInput'),evil);
-    await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
-    assert.ok((await text(page,'.summary-box')).includes(evil));
     await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
     assert.ok((await page.getAttribute('#cardPreview','alt')).includes(evil));
     assert.equal(await page.evaluate(()=>[window.__pwned,document.querySelectorAll('img:not(#cardPreview):not(.venue-logo)').length].join()),',0');
     assert.deepEqual(errors,[]);await ctx.close();
   });
-  test('a wrong phone number is explained before anything is sent',async()=>{
+  test('a missing or wrong phone number is explained before anything is sent',async()=>{
     const {page,ctx}=await open({time:MORNING});
-    await page.click('.cal-grid button[data-date="2026-11-25"]');
-    await page.click('#dateNext');await page.waitForSelector('#guestsNext');await page.click('#guestsNext');
-    await page.waitForSelector('#timeNext');await page.click('#timeNext');
-    await page.fill('#nameInput','דנה');await page.fill('#phoneInput','abc');
-    await page.click('#detailsForm button[type=submit]');
-    assert.match(await text(page,'#detailsError'),/מספר הטלפון לא תקין/);
-    await page.fill('#phoneInput','+972 50-123-4567');await page.click('#detailsForm button[type=submit]');await page.waitForSelector('#submitBtn');
+    await choose(page);await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    await page.click('#submitBtn');
+    assert.match(await text(page,'#submitError'),/נא למלא שם וטלפון/);
+    await page.fill('#nameInput','דנה');await page.fill('#phoneInput','abc');await page.click('#submitBtn');
+    assert.match(await text(page,'#submitError'),/מספר הטלפון לא תקין/);
+    assert.equal((await rpcCalls(page,'book_reservation')).length,0);
+    await page.fill('#phoneInput','+972 50-123-4567');
     await page.click('#submitBtn');await page.waitForSelector('.success');
     await ctx.close();
   });
@@ -222,39 +259,36 @@ describe('customer booking page',()=>{
     assert.match(await text(page,'#submitError'),/אחד הפרטים לא תקין/);
     assert.ok(await page.isEnabled('#submitBtn'));await ctx.close();
   });
-  test('a date with no free places shows a message and stays on the calendar',async()=>{
-    const {page,ctx}=await open({time:MORNING,cfg:{spots:0}});
-    await page.click('.cal-grid button[data-date="2026-11-25"]');
-    await page.click('#dateNext');await page.waitForTimeout(200);
-    assert.match(await text(page,'#stepArea'),/אין מקומות פנויים בתאריך הזה/);
-    assert.ok(await page.isVisible('.cal-grid'));await ctx.close();
-  });
-  test('a group with no fitting place shows a message on the guests step',async()=>{
+  test('no room for the group on that date: a message, and the form stays closed',async()=>{
     const {page,ctx}=await open({time:MORNING,cfg:{available:false}});
-    await page.click('.cal-grid button[data-date="2026-11-25"]');
-    await page.click('#dateNext');await page.waitForSelector('#guestsNext');
-    await page.click('#guestsNext');await page.waitForTimeout(200);
-    assert.match(await text(page,'#stepArea'),/אין מקום מתאים לקבוצה/);await ctx.close();
+    await choose(page);await page.click('#findBtn');await page.waitForSelector('#formWarning');
+    assert.equal(await text(page,'#formWarning'),'אין מקום ל-3 סועדים בתאריך הזה. נסו תאריך אחר או קבוצה קטנה יותר.');
+    assert.equal(await page.isVisible('#nameInput'),false);
+    // a new choice clears the message
+    await page.click('#pickGuests');await page.click('#sheet [data-guests="2"]');
+    assert.equal(await page.isVisible('#formWarning'),false);await ctx.close();
   });
-  test('if the date fills up while booking, the customer is sent back to pick another date',async()=>{
+  test('if the date fills up while booking, the customer is asked to pick another date',async()=>{
     const {page,ctx}=await open({time:MORNING,cfg:{bookResult:'full'}});
-    await fillBooking(page);await page.click('#submitBtn');await page.waitForTimeout(300);
-    assert.match(await text(page,'#stepArea'),/התאריך הזה התמלא בדיוק עכשיו/);
-    assert.ok(await page.isVisible('.cal-grid'));await ctx.close();
+    await fillBooking(page);await page.click('#submitBtn');await page.waitForSelector('#formWarning');
+    assert.match(await text(page,'#formWarning'),/התאריך הזה התמלא בדיוק עכשיו/);
+    assert.match(await text(page,'#pickDate'),/^תאריך/);
+    assert.equal(await page.isVisible('#submitBtn'),false);await ctx.close();
   });
   test('from 20:00, today can no longer be booked',async()=>{
     const {page,ctx}=await open({time:'2026-11-22T20:05:00+02:00'});
+    await openCalendar(page);
     assert.equal(await page.evaluate(()=>document.querySelector('.cal-grid button.today')?.dataset.date),'2026-11-22');
     assert.equal(await page.isDisabled('.cal-grid button[data-date="2026-11-22"]'),true);
     await ctx.close();
   });
   test('today picked just before 20:00 is refused if the page is still open after 20:00',async()=>{
-    const {page,ctx}=await open({time:'2026-11-22T19:59:00+02:00'});
-    await page.click('.cal-grid button[data-date="2026-11-22"]');
+    const {page,ctx}=await open({time:'2026-11-22T19:20:00+02:00'});
+    await choose(page,{date:'2026-11-22',time:'21:00'});
     await page.clock.setFixedTime(new Date('2026-11-22T20:01:00+02:00'));
-    await page.click('#dateNext');await page.waitForTimeout(200);
-    assert.match(await text(page,'#stepArea'),/ההזמנות המקוונות ליום זה נסגרו/);
-    assert.equal((await rpcCalls(page,'available_spots')).length,0);await ctx.close();
+    await page.click('#findBtn');await page.waitForSelector('#formWarning');
+    assert.match(await text(page,'#formWarning'),/ההזמנות המקוונות ליום זה נסגרו/);
+    assert.equal((await rpcCalls(page,'check_availability')).length,0);await ctx.close();
   });
   // Bug found Nov 2026: every calendar day was linked to the day before it
   // (dates went through UTC), so tapping 26 booked the 25th.
@@ -263,28 +297,34 @@ describe('customer booking page',()=>{
   for(const [label,time,today] of [['in the morning','2026-11-22T10:00:00+02:00','2026-11-22'],['just after midnight','2026-11-23T00:30:00+02:00','2026-11-23']]){
     test(`each calendar day books that same date, and today is marked correctly (${label})`,async()=>{
       const {page,ctx}=await open({time});
+      await openCalendar(page);
       const days=await calendarDays(page);
       assert.deepEqual(days.filter(d=>+d.date.slice(8)!==d.n),[]);
       assert.deepEqual(days.filter(d=>d.today).map(d=>d.date),[today]);
-      await page.click('.cal-grid button:has-text("26")');await page.click('#dateNext');await page.waitForTimeout(200);
-      assert.equal((await rpcCalls(page,'available_spots'))[0].args.p_date,'2026-11-26');
+      await page.click('.cal-grid button:has-text("26")');
+      await choose(page,{date:null});await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+      assert.equal((await rpcCalls(page,'check_availability'))[0].args.p_date,'2026-11-26');
       await ctx.close();
     });
   }
   test('a phone in another time zone still uses Israel time for today and the cutoff',async()=>{
     // 20:30 in Israel is 13:30 in New York: today is already closed in Israel
     const {page,ctx}=await open({time:'2026-11-22T20:30:00+02:00',timezoneId:'America/New_York'});
+    await openCalendar(page);
     assert.deepEqual((await calendarDays(page)).filter(d=>d.today).map(d=>d.date),['2026-11-22']);
     assert.equal(await page.isDisabled('.cal-grid button[data-date="2026-11-22"]'),true);
     await ctx.close();
   });
-  test('tapping a finished step in the progress line goes back to it',async()=>{
+  test('the calendar panel moves between months within the 30 days ahead',async()=>{
     const {page,ctx}=await open({time:MORNING});
-    await fillBooking(page);
-    await page.click('.progress .step-chip.done[data-step="0"]');
-    assert.match(await text(page,'#stepArea'),/מתי מגיעים\?/);
-    assert.equal(await page.evaluate(()=>document.querySelector('.cal-grid button.selected')?.dataset.date),'2026-11-25');
-    await ctx.close();
+    await openCalendar(page);
+    assert.equal(await page.isDisabled('#prevMonth'),true);
+    await page.click('#nextMonth');
+    assert.match(await text(page,'.cal-month'),/דצמבר 2026/);
+    assert.equal(await page.isDisabled('.cal-grid button[data-date="2026-12-22"]'),false);
+    assert.equal(await page.isDisabled('.cal-grid button[data-date="2026-12-23"]'),true);
+    await page.click('.cal-grid button[data-date="2026-12-10"]');
+    assert.match(await text(page,'#pickDate'),/10\.12/);await ctx.close();
   });
 });
 
