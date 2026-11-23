@@ -16,7 +16,8 @@ const MORNING='2026-11-22T10:00:00+02:00';
 const rpcCalls=(page,name)=>page.evaluate(n=>__ops.filter(o=>o.rpc===n),name);
 
 // The one-screen booking page: pick guests, date and time in the bottom panels
-async function choose(page,{guests=3,date='2026-11-25',time='17:15'}={}){
+async function choose(page,{seating='table',guests=3,date='2026-11-25',time='17:15'}={}){
+  if(seating)await page.click(`[data-seating="${seating}"]`);
   if(guests){await page.click('#pickGuests');await page.click(`#sheet [data-guests="${guests}"]`);}
   if(date){await page.click('#pickDate');await page.click(`#sheet .cal-grid button[data-date="${date}"]`);}
   if(time){await page.click('#pickTime');await page.click(`#sheet [data-time="${time}"]`);}
@@ -36,7 +37,10 @@ describe('customer booking page',()=>{
     const {page,ctx,errors}=await open({time:MORNING});
     assert.equal(await text(page,'#indoorNote'),'הזמנה לישיבה בפנים בלבד. בחוץ ללא הזמנה, לפי מקום פנוי.');
     assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim())),['סועדים ▾','תאריך ▾','שעה ▾']);
+    assert.equal(await page.evaluate(()=>document.querySelectorAll('.seating button.on').length),0,'table / bar not chosen yet');
     assert.equal(await page.isDisabled('#findBtn'),true,'nothing chosen yet');
+    await choose(page,{seating:null});
+    assert.equal(await page.isDisabled('#findBtn'),true,'table or bar must be chosen too');
     assert.equal(await page.isVisible('#nameInput'),false);
     await choose(page);
     assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim())),['3 סועדים ▾','ד׳ 25.11 ▾','17:15 ▾']);
@@ -56,7 +60,7 @@ describe('customer booking page',()=>{
   test('when there is room, the details form opens on the same screen with the arrival rules above the button',async()=>{
     const {page,ctx}=await open({time:MORNING});
     await choose(page);await page.click('#findBtn');await page.waitForSelector('#submitBtn');
-    assert.deepEqual((await rpcCalls(page,'check_availability')).map(c=>c.args),[{p_date:'2026-11-25',p_guests:3}]);
+    assert.deepEqual((await rpcCalls(page,'check_availability')).map(c=>c.args),[{p_date:'2026-11-25',p_guests:3,p_seating:'table'}]);
     assert.equal(await text(page,'.found-title'),'יש מקום! נשאר רק להשאיר פרטים');
     assert.equal(await text(page,'#rules'),'נחכה למאחרים עד 15 דקות משעת ההזמנה. אחר כך לא נוכל להתחייב שהמקום יישמר לכם 🙏 הקדמתם? ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.');
     assert.ok(await page.evaluate(()=>document.getElementById('rules').compareDocumentPosition(document.getElementById('submitBtn'))&Node.DOCUMENT_POSITION_FOLLOWING));
@@ -89,7 +93,7 @@ describe('customer booking page',()=>{
     await page.fill('#noteInput','יום הולדת');
     await page.click('#submitBtn');await page.waitForSelector('.success');
     const [call]=await rpcCalls(page,'book_reservation');
-    assert.deepEqual(call.args,{p_date:'2026-11-25',p_time:'17:15',p_name:'דנה כהן',p_phone:'050-1234567',p_guests:3,p_note:'יום הולדת'});
+    assert.deepEqual(call.args,{p_date:'2026-11-25',p_time:'17:15',p_name:'דנה כהן',p_phone:'050-1234567',p_guests:3,p_note:'יום הולדת',p_seating:'table'});
     // the confirmation is the booking card picture only (owner's request), described for screen readers
     await page.waitForSelector('#cardPreview:not([hidden])');
     assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, שולחן ל-3 סועדים, 25.11 בשעה 17:15');
@@ -98,6 +102,51 @@ describe('customer booking page',()=>{
     assert.equal((await page.evaluate(()=>__ops.filter(o=>o.fn))).length,0,'no email is requested');
     assert.deepEqual(errors,[]);await ctx.close();
   });
+  // Table or bar (owner, Nov 2026)
+  test('choosing the bar limits the group to 4 and books at the bar; the card says so',async()=>{
+    const {page,ctx,errors}=await open({time:MORNING});
+    await choose(page,{seating:'table',guests:6,date:null,time:null});
+    await page.click('[data-seating="bar"]');
+    assert.match(await text(page,'#pickGuests'),/^סועדים/,'6 guests can not sit at the bar: cleared');
+    await page.click('#pickGuests');
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#sheet [data-guests]')].map(b=>+b.dataset.guests)),[1,2,3,4]);
+    assert.match(await text(page,'#sheet .hint'),/בבר: עד 4 סועדים בהזמנה/);
+    await page.click('#sheet [data-guests="2"]');
+    await choose(page,{seating:null,guests:null});
+    await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    assert.equal((await rpcCalls(page,'check_availability'))[0].args.p_seating,'bar');
+    await page.fill('#nameInput','דנה כהן');await page.fill('#phoneInput','050-1234567');
+    await page.click('#submitBtn');await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.equal((await rpcCalls(page,'book_reservation'))[0].args.p_seating,'bar');
+    assert.equal(await page.getAttribute('#cardPreview','alt'),'ההזמנה אושרה: דנה כהן, בבר, ל-2 סועדים, 25.11 בשעה 17:15');
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('table chosen but none left: the bar is offered, and one tap books there',async()=>{
+    const {page,ctx}=await open({time:MORNING,cfg:{available:'bar'}});
+    await choose(page,{guests:2});await page.click('#findBtn');await page.waitForSelector('#barOffer');
+    assert.match(await text(page,'#barOffer'),/^אין שולחנות פנויים בתאריך הזה, אבל יש מקום בבר\. להזמין בבר$/);
+    assert.equal(await page.isVisible('#nameInput'),false);
+    await page.evaluate(()=>{window.__cfg.available='yes';});
+    await page.click('#switchBar');await page.waitForSelector('#submitBtn');
+    assert.equal(await page.evaluate(()=>document.querySelector('.seating button.on').dataset.seating),'bar');
+    assert.equal(await page.isVisible('#barOffer'),false);
+    assert.deepEqual((await rpcCalls(page,'check_availability')).map(c=>c.args.p_seating),['table','bar']);
+    await ctx.close();
+  });
+  test('the tables filling up while booking also offers the bar',async()=>{
+    const {page,ctx}=await open({time:MORNING,cfg:{bookResult:'bar_available'}});
+    await fillBooking(page,{guests:2});await page.click('#submitBtn');await page.waitForSelector('#barOffer');
+    assert.equal(await page.isVisible('#submitBtn'),false);await ctx.close();
+  });
+  // Double bookings (owner, Nov 2026): one per phone per evening, 3 an hour per connection
+  for(const [result,msg] of [['duplicate',/כבר יש הזמנה על מספר הטלפון הזה לערב הזה/],['too_many',/נעשו כבר כמה הזמנות מהחיבור הזה בשעה האחרונה/]]){
+    test(`a refused double booking is explained (${result})`,async()=>{
+      const {page,ctx}=await open({time:MORNING,cfg:{bookResult:result}});
+      await fillBooking(page);await page.click('#submitBtn');await page.waitForTimeout(200);
+      assert.match(await text(page,'#submitError'),msg);
+      assert.ok(await page.isEnabled('#submitBtn'));await ctx.close();
+    });
+  }
   // a phone that can share files: record what would go to the share sheet
   const fakeShare=()=>{window.__shared=[];navigator.canShare=d=>!!(d&&d.files);
     navigator.share=async d=>{window.__shared.push((d.files||[]).map(f=>f.name+'|'+f.type+'|'+(f.size>10000)));window.__sharedText=d.text;};};
@@ -183,7 +232,7 @@ describe('customer booking page',()=>{
     assert.equal(url.origin+url.pathname,'https://calendar.google.com/calendar/render');
     assert.equal(url.searchParams.get('dates'),'20261125T171500/20261125T191500');
     assert.equal(url.searchParams.get('ctz'),'Asia/Jerusalem');
-    assert.equal(url.searchParams.get('text'),'עיזה בר - שולחן ל-3');
+    assert.equal(url.searchParams.get('text'),'עיזה בר - שולחן ל-3 סועדים');
     assert.match(url.searchParams.get('details'),/דנה כהן/);
     assert.equal(await page.getAttribute('#calLink','target'),'_blank');await ctx.close();
   });
@@ -195,7 +244,7 @@ describe('customer booking page',()=>{
     const ics=require('fs').readFileSync(await dl.path(),'utf8');
     // 17:15 in Israel in November is 15:15 UTC; two hours long
     assert.match(ics,/\r\nDTSTART:20261125T151500Z\r\nDTEND:20261125T171500Z\r\n/);
-    for(const line of ['BEGIN:VCALENDAR','PRODID:','UID:','DTSTAMP:','SUMMARY:עיזה בר - שולחן ל-3','LOCATION:עיזה בר','END:VCALENDAR'])assert.ok(ics.includes(line),line);
+    for(const line of ['BEGIN:VCALENDAR','PRODID:','UID:','DTSTAMP:','SUMMARY:עיזה בר - שולחן ל-3 סועדים','LOCATION:עיזה בר','END:VCALENDAR'])assert.ok(ics.includes(line),line);
     // summer time: Israel is 3 hours ahead
     assert.equal(await page.evaluate(()=>israelToUtc('20260610T170000')),'20260610T140000Z');
     await ctx.close();
@@ -260,7 +309,7 @@ describe('customer booking page',()=>{
     assert.ok(await page.isEnabled('#submitBtn'));await ctx.close();
   });
   test('no room for the group on that date: a message, and the form stays closed',async()=>{
-    const {page,ctx}=await open({time:MORNING,cfg:{available:false}});
+    const {page,ctx}=await open({time:MORNING,cfg:{available:'no'}});
     await choose(page);await page.click('#findBtn');await page.waitForSelector('#formWarning');
     assert.equal(await text(page,'#formWarning'),'אין מקום ל-3 סועדים בתאריך הזה. נסו תאריך אחר או קבוצה קטנה יותר.');
     assert.equal(await page.isVisible('#nameInput'),false);
@@ -629,6 +678,17 @@ describe('manager page (floor plan and evening sheet)',()=>{
 });
 
 describe('personal booking page (booking.html#secret)',()=>{
+  test('a bar booking says "בבר" and can be changed to at most 4 guests',async()=>{
+    const T='11111111-2222-4333-8444-555555555555';
+    const {page,ctx,errors}=await open({time:MORNING,file:'booking.html#'+T,cfg:{changeResult:'duplicate',bookings:[{access_token:T,id:7,status:'confirmed',
+      reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true,seating:'bar'}]}});
+    await page.waitForSelector('#cardPreview:not([hidden])');
+    assert.match(await page.getAttribute('#cardPreview','alt'),/דנה, בבר, ל-2 סועדים/);
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#guestsInput option')].map(o=>+o.value)),[1,2,3,4]);
+    await page.fill('#dateInput','2026-11-26');await page.click('#saveChange');await page.waitForSelector('#msg');
+    assert.match(await text(page,'#msg'),/כבר יש הזמנה אחרת על מספר הטלפון הזה בערב הזה/);
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
   const TOKEN='11111111-2222-4333-8444-555555555555';
   const bk=(extra={})=>({access_token:TOKEN,id:101,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',
     customer_name:'דנה כהן',guests:3,note:'יום הולדת',cancelled_by:null,can_change:true,can_cancel:true,...extra});

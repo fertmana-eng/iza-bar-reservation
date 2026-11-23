@@ -232,8 +232,8 @@ function render() {
   page.innerHTML = `
     <p class="status"><span class="s-${esc(b.status)}" id="statusLabel">${STATUS[b.status] || ''}</span></p>
     ${active
-      ? `<img class="card-preview" id="cardPreview" alt="${STATUS[b.status]}: ${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים, ${when}" hidden>`
-      : `<div class="closed-box"><h2>${STATUS[b.status]}</h2><p>${esc(b.customer_name)}, שולחן ל-${b.guests} סועדים</p><p>${when}</p></div>`}
+      ? `<img class="card-preview" id="cardPreview" alt="${STATUS[b.status]}: ${esc(b.customer_name)}, ${placeText(b.seating, b.guests)}, ${when}" hidden>`
+      : `<div class="closed-box"><h2>${STATUS[b.status]}</h2><p>${esc(b.customer_name)}, ${placeText(b.seating, b.guests)}</p><p>${when}</p></div>`}
     ${message ? `<p class="msg ${message.ok ? 'ok' : 'err'}" id="msg">${message.text}</p>` : ''}
     ${notifyHtml(b)}
     ${b.status === 'pending' && b.prev_date ? `<p class="pending-note" id="pendingNote">השינוי ממתין לאישור. אם לא יאושר, נשארת ההזמנה המקורית:
@@ -246,7 +246,7 @@ function render() {
             <input type="date" id="dateInput" value="${b.reservation_date}" min="${israelNow().date}" max="${addDays(israelNow().date, 30)}"></div>
           <div class="field"><label for="timeInput">שעה</label><select id="timeInput"></select></div>
           <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput">
-            ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i + 1 === b.guests ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
+            ${Array.from({ length: b.seating === 'bar' ? 4 : 10 }, (_, i) => `<option value="${i + 1}" ${i + 1 === b.guests ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
         </div>
         <button type="button" class="btn-outline" id="saveChange">שמירת השינויים</button>
       </div>
@@ -282,7 +282,8 @@ async function drawCard() {
   try {
     const canvas = document.createElement('canvas');
     drawBookingCard(canvas, { business: BUSINESS_NAME, name: booking.customer_name, guests: booking.guests,
-      time: booking.arrival_time.slice(0, 5), date: booking.reservation_date, bookingId: booking.id, pending: booking.status === 'pending' });
+      time: booking.arrival_time.slice(0, 5), date: booking.reservation_date, bookingId: booking.id, pending: booking.status === 'pending',
+      seating: booking.seating });
     img.src = canvas.toDataURL('image/png'); img.hidden = false;
   } catch (e) { /* the status line and buttons are enough without the picture */ }
 }
@@ -308,6 +309,7 @@ async function saveChange() {
                                             : 'הבקשה עודכנה וממתינה לאישור. נעדכן אתכם בוואטסאפ.' },
     unchanged: { text: 'לא שיניתם כלום.' },
     full: { text: 'אין מקום מתאים בשינוי הזה. ההזמנה נשארה כמו שהייתה.' },
+    duplicate: { text: 'כבר יש הזמנה אחרת על מספר הטלפון הזה בערב הזה. ההזמנה נשארה כמו שהייתה.' },
     closed: { text: 'אי אפשר להזמין להיום אחרי 20:00. ההזמנה נשארה כמו שהייתה.' },
     invalid_time: { text: 'השעה שבחרתם כבר לא זמינה. בחרו שעה מאוחרת יותר.' },
     locked: { text: 'כבר אי אפשר לשנות את ההזמנה. כתבו לנו בוואטסאפ.' }

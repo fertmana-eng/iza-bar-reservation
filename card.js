@@ -2,6 +2,12 @@
 // page (index.html) and the personal booking page (booking.html).
 // b: { business, name, guests, time 'HH:MM', date 'YYYY-MM-DD', bookingId, pending }
 const CARD_W = 1080, CARD_H = 1350;
+// "שולחן ל-3 סועדים" or "בבר, ל-2 סועדים": the seating area the booking ended up in
+// (owner, Nov 2026), used on the card and in the texts of both customer pages.
+function placeText(seating, guests) {
+  return seating === 'bar' ? `בבר, ל-${guests} סועדים` : `שולחן ל-${guests} סועדים`;
+}
+
 function drawBookingCard(canvas, b) {
   canvas.width = CARD_W; canvas.height = CARD_H;
   const c = canvas.getContext('2d'), ink = '#1c1610', paper = '#f0e8d0', soft = '#5a4f3c', mid = CARD_W / 2;
@@ -24,7 +30,7 @@ function drawBookingCard(canvas, b) {
   const weekday = day.toLocaleDateString('he-IL', { weekday: 'long' }), dateShort = `${d}.${m}`;
   text(weekday + ' · ' + dateShort, 650, 70, 800, ink);
   text(b.time, 850, 190, 900, ink);
-  text(`שולחן ל-${b.guests} סועדים`, 950, 58, 600, ink);
+  text(placeText(b.seating, b.guests), 950, 58, 600, ink);
   dashed(1020);
   if (b.pending) {
     text('ממתינה לאישור · נעדכן אתכם בוואטסאפ', 1100, 40, 700, ink);
