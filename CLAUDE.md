@@ -181,10 +181,10 @@ Same owner as the IzaZoo management app (repository
   `admin.html`). The old copies: **Cloudflare** deleted by the owner (22 Nov
   2026). **Netlify** (project `remarkable-twilight-87b52c`) deleted
   by Claude with the owner's OK through Netlify's API (23 Nov 2026; it was
-  emailing the owner about every change). The owner's Netlify account still
-  has an unrelated project `zippy-sprite-5d7768` (not linked to this
-  repository; left alone). The Netlify GitHub app may still be installed on
-  the owner's GitHub account (harmless now).
+  emailing the owner about every change), and the owner's other old Netlify
+  project `zippy-sprite-5d7768` too (owner's OK); the Netlify account is now
+  empty. The Netlify GitHub app may still be installed on the owner's GitHub
+  account (harmless now).
 - Database changes are kept in `supabase/migrations/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
