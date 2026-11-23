@@ -13,8 +13,9 @@ Same owner as the IzaZoo management app (repository
   test it on their phone. Still ask before anything that cannot be undone, such
   as deleting data or changing the database.
 - **Model:** the owner is on the Pro plan; use Opus. For hard or risky work,
-  work in small steps, test each one (before/after screenshots for visual
-  changes), and ask the owner to check each step on their phone.
+  work in small steps, test each one (no screenshots for the owner, who
+  checks changes live in the apps), and ask the owner to check each step on
+  their phone.
 - **Say up front when something can't be done** (browser or platform rules
   that code can't change), before writing code, and offer the best alternative.
 - **Keep this file up to date** whenever something worth remembering happens
@@ -350,7 +351,11 @@ the documents, and how long to keep bookings.
   tokens): for small text / colour / size changes run only the related tests
   here and rely on GitHub's automatic full run before going live; run the
   full set here for logic, booking rules, the database and manager actions.
-  Take a screenshot only when the look changes, one picture, not several.
+  **No screenshots for the owner** (owner: "I can see the changes live in
+  the app"): don't send images or wait for their OK on a look they asked
+  for; screenshots only as Claude's own quick check when a layout could
+  break, and the zero-difference comparison only for changes that should
+  not change the look (see /design-check).
   Batch several small requests from the owner into one change when they
   come together. **Offer /health-check when it fits** (owner: "offer a
   health check when you think it's appropriate"; never run or schedule it
@@ -391,9 +396,10 @@ with a fixed clock in Israel time.
 
 - **Behaviour tests:** `node --test tests/app.test.js` (84 tests). Run after
   every change; add a test for every bug fixed.
-- **Styling changes:** `tests/visual/screenshots.js` before and after, then
-  `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
-  differences, or differences the owner asked for.
+- **Styling changes that should not change the look** (clean-ups):
+  `tests/visual/screenshots.js` before and after, then `tests/visual/compare.js`
+  (`cd tests && npm install` first); accept only zero differences. Looks the
+  owner asked for: no screenshots, the owner checks live (see /design-check).
 - **Real-database check:** `tests/db/checks.sql` (rolled back; reports
   `DB CHECKS: ALL n PASSED`; 68 after 16_change_seating.sql, 23 Nov 2026), run by the security check through the connector.
   Not run on GitHub on purpose (it would need the database password there).
