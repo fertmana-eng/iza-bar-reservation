@@ -19,8 +19,18 @@ Work in plain, non-technical language for the owner (see CLAUDE.md).
 4. **If the change touches data, customer details, logins, permissions or the
    Supabase code,** run the security check
    (`.claude/skills/security-check/SKILL.md`) as well.
-5. **Wait for the automatic GitHub check** ("Tests" workflow) on the pull
+5. **Legal compliance (once the site is open to the public; see "Legal
+   compliance" in CLAUDE.md):** check the change against that list:
+   accessibility (IS 5568 / WCAG AA: keyboard, screen-reader labels,
+   contrast, text size, the accessibility statement still true), privacy
+   (any new personal detail collected or stored → privacy notice updated,
+   kept only as long as needed, no new outside service receiving customer
+   data without the owner's OK), terms of use still matching how booking
+   works, and messages (booking-related service messages only; never
+   marketing to collected numbers without separate consent). If the change
+   would break any of these, stop and tell the owner before merging.
+6. **Wait for the automatic GitHub check** ("Tests" workflow) on the pull
    request to be green before merging. If it is red, read its log and fix it.
-6. **Tell the owner what to check on the phone:** a short numbered list of
+7. **Tell the owner what to check on the phone:** a short numbered list of
    concrete steps on the booking page and/or the manager page.
-7. Report in a few lines: what was tested, the result, anything not covered.
+8. Report in a few lines: what was tested, the result, anything not covered.

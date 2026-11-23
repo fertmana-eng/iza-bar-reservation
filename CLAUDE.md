@@ -279,6 +279,50 @@ Same owner as the IzaZoo management app (repository
 3. The manager page runs on a tablet with the restaurant's WhatsApp (owner,
    Nov 2026), so approval messages go out from the restaurant's number.
 
+## Legal compliance (on hold until the product is finished)
+
+Researched 23 Nov 2026 (summaries from law-firm and vendor guides, not legal
+advice; sources disagree on some numbers). **Owner's decision: on hold until
+the product is finished; do it before opening to the public. Once the site is
+open to the public, every change must keep it compliant** (the /qa checklist
+has a legal step for that; if a change would break compliance, stop and tell
+the owner before merging). Before opening, in this order:
+
+1. **Privacy notice** (Privacy Protection Law, Amendment 13, in force Aug
+   2025): a page plus one line under the booking form saying who collects,
+   for what, that the details are needed to book, and how to see / correct /
+   delete them. Database registration very likely not needed (now mainly for
+   public bodies and data brokers). The regulator's first fines included a
+   small leisure business with an incomplete online privacy notice.
+2. **Terms of use** page linked from the form (a booking holds the place for
+   the evening, the 15-minute rule, the bar may cancel or move a booking,
+   bar = up to 4, no-shows, the site may be unavailable, Israeli law).
+3. **Accessibility** (Equal Rights for Persons with Disabilities regulations,
+   standard IS 5568 = WCAG AA): the bar is almost certainly above the
+   ~₪100,000 turnover exemption, so assume it applies. Check both customer
+   pages (panels, calendar, contrast, the card is a picture), fix, and
+   publish an accessibility statement with a named contact. Lawsuits without
+   proof of damage are common in Israel.
+4. **Keep data only as long as needed:** delete name / phone some time after
+   the visit (owner to choose 30 / 90 / 365 days; database change).
+5. **Remove outside services that see visitors** (Google Fonts for Heebo,
+   jsDelivr for supabase-js): host our own copies.
+6. **Written security procedure** for the database (Data Security
+   Regulations 2017, basic level): one page.
+7. **Lawyer review** of the privacy notice, terms and accessibility
+   statement (owner).
+
+Facts for the documents: personal data = name, phone, optional note, an md5
+fingerprint of the connection address, notification addresses (only if the
+customer turns them on), the phone's own list of bookings (on the phone);
+no cookies, trackers or payments; database in Supabase's Frankfurt region
+(EU, allowed by the transfer regulations); free plan has no automatic
+backups. Messages: reminders / approve-decline are booking service messages
+the customer asked for; **never use the collected numbers for marketing
+without separate, explicit consent** (spam law, section 30A). Still needed
+from the owner: the operator's legal name, number and contact details for
+the documents, and how long to keep bookings.
+
 ## How we make changes (always)
 
 - **All changes go through Claude Code on this repository**, never by pasting
