@@ -3,8 +3,8 @@
 One set of rules for all three pages (booking page, personal booking page,
 manager tablet). Owner's request, 23 Nov 2026: "more coherent – fonts, sizes,
 bolding, text colours, boxes". The rules come from what the pages already
-use most; the odd ones out are brought into line. **Status: proposed, waiting
-for the owner's OK; then applied page by page** (booking page → personal page →
+use most; the odd ones out are brought into line. **Status: approved by the owner
+(23 Nov 2026); being applied page by page** (booking page → personal page →
 manager page), each checked live by the owner.
 
 Every value lives in one shared file, `assets/theme.css` (to be created), as
@@ -13,8 +13,9 @@ colour codes, so a change in one place changes everything.
 
 ## Header
 
-IZAZOO logo (24 px high) + a light "//" + **עיזה בר** (24 px, extra bold,
-dark), centred with the logo. Same on every page.
+IZAZOO logo (24 px high) + "//" + **עיזה בר** (24 px, extra bold), both in
+the muted grey (#6b6862, the colour of "ההזמנות שלי"), centred with the logo.
+Same on every page, the tablet included.
 
 ## Font (decided, applied 23 Nov 2026)
 
