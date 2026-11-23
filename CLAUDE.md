@@ -46,6 +46,27 @@ Same owner as the IzaZoo management app (repository
   database decides), today greyed out from 20:00, today's times earlier than
   30 minutes ahead greyed out; the search re-checks the clock if the page
   stayed open.
+- **Table or bar** (owner, 23 Nov 2026; `15_seating_and_limits.sql`): a
+  "שולחן | בר" choice above the three boxes, nothing chosen at the start.
+  Bar: groups of 1–4 only (the guests panel shows 1–4; a bigger number is
+  cleared when switching to the bar). Table chosen but none left while the
+  bar has room: "אין שולחנות פנויים... אבל יש מקום בבר" with "להזמין בבר"
+  (one tap switches and searches again); no "no preference" option (owner).
+  The card, texts and personal page say where the booking ended up ("שולחן
+  ל-3 סועדים" / "בבר, ל-2 סועדים", `placeText()` in card.js). A customer's
+  change keeps the area they booked (the personal page offers 1–4 guests
+  for a bar booking). Manager bookings are unaffected.
+- **Double bookings** (owner, 23 Nov 2026; same file): one booking per phone
+  number per evening (digits compared, +972 read as 0; also when a change
+  moves to another evening) → "כבר יש הזמנה על מספר הטלפון הזה לערב
+  הזה"; at most 3 bookings an hour from the same connection (only an md5
+  fingerprint of the address is stored, `reservations.client_key`; skipped
+  if the address can't be read; note: phones on the same mobile network can
+  share an address, so a busy evening could in theory hit it) → "נסו שוב
+  מאוחר יותר". No WhatsApp invitation for bigger groups (owner: fewer
+  WhatsApp contacts); the guests panel says "עד 10 סועדים בהזמנה". SMS
+  checks and a tablet alert for suspicious bookings: not done (offer if
+  abuse happens).
 - **Same-day bookings by the hour they are made** (owner's decision, 22 Nov
   2026; `09_approval_window.sql`): before 16:00 confirmed at once; 16:00–20:00
   the request is `pending` and holds its table until the manager approves
@@ -291,13 +312,13 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (75 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (81 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
   differences, or differences the owner asked for.
 - **Real-database check:** `tests/db/checks.sql` (rolled back; reports
-  `DB CHECKS: ALL n PASSED`), run by the security check through the connector.
+  `DB CHECKS: ALL n PASSED`; 67 after 15_seating_and_limits.sql, 23 Nov 2026), run by the security check through the connector.
   Not run on GitHub on purpose (it would need the database password there).
 - **The fake database has no access rules**, and its `check_availability`
   answers even though that function may not exist in the real database.
@@ -347,6 +368,11 @@ with a fixed clock in Israel time.
 - **In `tests/db/checks.sql`, don't name a table alias `r`**: the block
   already has a loop variable `r`, and PL/pgSQL mixes them up ("record r has
   no field ...").
+- **A trial run that drops or replaces database functions also triggers the
+  connector's confirmation prompt** (which never reaches the owner), even
+  inside a rolled-back block. For such changes: the owner pastes the real
+  change, then Claude runs `tests/db/checks.sql` (insert/select only, no
+  prompt) right after; or the owner pastes the trial run.
 - **In tests, wait for the result, not a fixed pause.** GitHub's machine is
   slower than this one: a test that checked for a WhatsApp window after
   0.4 s failed there once. Use `waitForEvent` / `waitForFunction`.

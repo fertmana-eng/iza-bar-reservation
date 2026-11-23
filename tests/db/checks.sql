@@ -98,7 +98,7 @@ begin
     then failed:=failed||'decide_request: only the logged-in manager may call it'::text; end if;
   total:=total+1;
   insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status,prev)
-    select d,'20:30','בדיקת שינוי','050-0000000',2,null,'bar_pool','pending',
+    select d,'20:30','בדיקת שינוי','050-1000001',2,null,'bar_pool','pending',
            jsonb_build_object('reservation_date',d,'arrival_time','19:00','guests',2,'assigned_table_id',id,'assigned_kind','table')
     from public.venue_tables where kind='table' and active and not public.table_taken(id,d,null) order by id limit 1
     returning (prev->>'assigned_table_id')::int into n;
@@ -111,9 +111,12 @@ begin
   total:=total+1;
   n := public.available_spots(d);
   insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status)
-    select d,'19:00','בדיקה ממתינה','050-0000000',2,id,'table','pending' from public.venue_tables
+    select d,'19:00','בדיקה ממתינה','050-1000002',2,id,'table','pending' from public.venue_tables
     where kind='table' and active and not public.table_taken(id,d,null) order by id limit 1;
   if public.available_spots(d)<>n-1 then failed:=failed||'a pending request does not hold its table'::text; end if;
+
+  insert into public.reservations(reservation_date,arrival_time,customer_name,phone,guests,assigned_table_id,assigned_kind,status)
+    select d+4,'19:00','שולחנות מלאים','054-'||lpad(id::text,7,'0'),2,id,'table','confirmed' from public.venue_tables where kind='table' and active;
 
   -- ---------- as the public (anyone with the page's key) ----------
   perform set_config('role','anon',true);
@@ -146,7 +149,7 @@ begin
   if ok_list<>'invalid,invalid,invalid,invalid,invalid' then failed:=failed||('bad input not refused: '||ok_list); end if;
   -- the personal booking link (10_booking_link.sql): only with the right secret
   total:=total+1;
-  select b.booking_token into tok from public.book_reservation(d,'19:30','בדיקת קישור','050-0000000',2,null,null) b;
+  select b.booking_token into tok from public.book_reservation(d,'19:30','בדיקת קישור','050-0000001',2,null,null) b;
   if tok is null then failed:=failed||'a new booking has no secret link'::text;
   else
     select count(*) into n from public.get_booking(tok);
@@ -175,6 +178,40 @@ begin
   exception when insufficient_privilege then null; end;
   total:=total+1;
   if public.available_spots(d) is null or public.check_availability(d,2) is null then failed:=failed||'availability functions fail for the public'::text; end if;
+
+  -- table or bar, and double bookings (15_seating_and_limits.sql)
+  total:=total+1;
+  select string_agg(b.result||'/'||coalesce(b.seating,'-'),',') into ok_list from (
+    select (x).result, (x).seating from (select public.book_reservation(d,'18:30','בדיקת בר','052-2000001',2,null,'bar') x) y
+    union all select (x).result, (x).seating from (select public.book_reservation(d,'18:30','כפול','+972 52-200-0001',2,null,'table') x) y) b;
+  if ok_list<>'confirmed/bar,duplicate/-' then failed:=failed||('bar booking / one per phone per evening: '||ok_list); end if;
+  total:=total+1;
+  select b.booking_token into tok from public.book_reservation(d+1,'18:30','בדיקת בר','052-2000001',2,null,'bar') b;
+  if tok is null or (select g.seating from public.get_booking(tok) g)<>'bar'
+    then failed:=failed||'the link does not show the bar'::text;
+  elsif public.change_booking(tok, d+1, '19:00', 3)<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'bar'
+    then failed:=failed||'a change does not keep the bar'::text;
+  elsif public.change_booking(tok, d, '19:00', 3)<>'duplicate'
+    then failed:=failed||'a change can move onto an evening the phone already booked'::text; end if;
+  total:=total+1;
+  perform set_config('request.headers','{"x-forwarded-for":"203.0.113.9, 10.0.0.1"}',true);
+  select string_agg(b.result,',' order by ph) into ok_list
+    from unnest(array['053-3000001','053-3000002','053-3000003','053-3000004']) ph
+    cross join lateral public.book_reservation(d+2,'19:00','בדיקת קצב',ph,2,null,null) b;
+  perform set_config('request.headers','{"x-forwarded-for":"198.51.100.7"}',true);
+  select ok_list||','||(public.book_reservation(d+2,'19:00','בדיקת קצב','053-3000005',2,null,null)).result into ok_list;
+  perform set_config('request.headers','',true);
+  if ok_list<>'confirmed,confirmed,confirmed,too_many,confirmed' then failed:=failed||('3 bookings an hour per connection: '||ok_list); end if;
+  total:=total+1;
+  if public.check_availability(d+3,2,'table')<>'yes' or public.check_availability(d+3,2,'bar')<>'yes'
+     or public.check_availability(d+3,6,'bar')<>'no'
+    then failed:=failed||'the search does not follow table / bar'::text; end if;
+
+  total:=total+1;
+  if public.check_availability(d+4,2,'table')<>'bar'
+     or (select b.result from public.book_reservation(d+4,'19:00','בדיקת שולחן','055-5000001',2,null,'table') b)<>'bar_available'
+     or (select b.seating from public.book_reservation(d+4,'19:00','בדיקת שולחן','055-5000001',2,null,'bar') b)<>'bar'
+    then failed:=failed||'no table left: the bar is not offered'::text; end if;
 
   -- ---------- as the logged-in manager ----------
   perform set_config('role','authenticated',true);

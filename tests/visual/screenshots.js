@@ -6,7 +6,7 @@ const path=require('path'),fs=require('fs');
 const {chromium,startServer,openPage}=require('../helpers');
 const OUT=path.resolve(process.argv[2]||path.join(__dirname,'out/shots'));fs.mkdirSync(OUT,{recursive:true});
 const TIME='2026-11-22T10:00:00+02:00';
-const choose=async p=>{await p.click('#pickGuests');await p.click('#sheet [data-guests="3"]');
+const choose=async p=>{await p.click('[data-seating="table"]');await p.click('#pickGuests');await p.click('#sheet [data-guests="3"]');
   await p.click('#pickDate');await p.click('#sheet .cal-grid button[data-date="2026-11-25"]');
   await p.click('#pickTime');await p.click('#sheet [data-time="19:00"]');};
 const toSummary=async p=>{await choose(p);await p.click('#findBtn');await p.waitForSelector('#submitBtn');
@@ -23,7 +23,12 @@ const STATES=[
  ['sheet-time',async p=>{await p.click('#pickTime');}],
  ['chosen',choose],
  ['no-room',async p=>{await choose(p);await p.click('#findBtn');await p.waitForSelector('#formWarning');},{available:false}],
+ ['bar-offer',async p=>{await choose(p);await p.click('#findBtn');await p.waitForSelector('#barOffer');},{available:'bar'}],
  ['summary',toSummary],
+ ['success-bar',async p=>{await p.click('[data-seating="bar"]');await p.click('#pickGuests');await p.click('#sheet [data-guests="2"]');
+   await p.click('#pickDate');await p.click('#sheet .cal-grid button[data-date="2026-11-25"]');await p.click('#pickTime');await p.click('#sheet [data-time="19:00"]');
+   await p.click('#findBtn');await p.waitForSelector('#submitBtn');await p.fill('#nameInput','דנה כהן');await p.fill('#phoneInput','050-1234567');
+   await p.click('#submitBtn');await p.waitForSelector('#cardPreview:not([hidden])');}],
  ['success',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');}],
  ['success-android',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');},{},undefined,{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36'}],
  ['success-pending',async p=>{await toSummary(p);await p.click('#submitBtn');await p.waitForSelector('.success');},{bookResult:'pending'}],

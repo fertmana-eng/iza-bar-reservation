@@ -56,6 +56,12 @@
   .notice { font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: center; margin: -16px 0 20px; }
   #approvalNote { margin: -6px 0 14px; color: var(--ink); }
 
+  /* Table or bar */
+  .seating { display: grid; grid-template-columns: 1fr 1fr; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 12px; }
+  .seating button { all: unset; box-sizing: border-box; text-align: center; padding: 11px 0; border-radius: 9px; font-size: 15.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+  .seating button.on { background: var(--accent); color: #fff; }
+  .seating button:focus-visible { outline: 2px solid var(--accent); }
+
   /* The three choice boxes (guests, date, time), side by side */
   .pickers { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--field-border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
   .pick {
@@ -87,6 +93,8 @@
   .choice-grid button.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
   .choice-grid button:disabled { color: #cfc9bd; border-color: var(--line); cursor: default; }
 
+  .bar-offer { text-align: center; margin: -6px 0 16px; }
+  .bar-offer p { font-size: 14.5px; color: var(--ink); margin: 0 0 4px; }
   .details { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; scroll-margin-top: 70px; }
   .found-title { font-size: 17px; font-weight: 700; color: var(--accent); margin: 0 0 16px; text-align: center; }
   .rules { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 16px; }
@@ -211,13 +219,15 @@ const stepArea = document.getElementById('stepArea');
 const BOOKING_WINDOW_DAYS = 30;
 // Shown to customers only; the database decides (its 'approval_from' setting is private).
 const APPROVAL_FROM = '16:00';
+const BAR_MAX = 4;
 const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 let pageSettings = null;
 let viewMonth, minDate, maxDate;
 let warning = null;    // shown under the three boxes
 let found = false;     // there is room for the chosen guests and date: the details form is open
+let offerBar = false;  // table chosen, no table left, but the bar has room
 
-const formData = { date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
+const formData = { seating: null, placed: null, date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
 
 // All dates and times are the restaurant's (Israel), whatever the phone's
 // time zone. Calendar days are kept as 'YYYY-MM-DD' text built from the day's
@@ -298,13 +308,17 @@ function renderBooking() {
   closeSheet();
   const now = israelNow();
   const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
-  const ready = formData.guests && formData.date && formData.time;
+  const ready = formData.seating && formData.guests && formData.date && formData.time;
   const box = (id, label, value) => `<button type="button" class="pick${value ? ' set' : ''}" id="${id}" aria-label="${label}: ${value || 'לא נבחר'}">
       <span class="pick-value">${value || label}</span><span class="pick-caret" aria-hidden="true">▾</span></button>`;
   stepArea.innerHTML = `
     ${myBookingsHtml()}
     <p class="step-question">הזמנת שולחן</p>
     <p class="notice" id="indoorNote">הזמנה לישיבה בפנים בלבד.<br>בחוץ ללא הזמנה, לפי מקום פנוי.</p>
+    <div class="seating" role="radiogroup" aria-label="איפה לשבת?">
+      <button type="button" role="radio" aria-checked="${formData.seating === 'table'}" class="${formData.seating === 'table' ? 'on' : ''}" data-seating="table">שולחן</button>
+      <button type="button" role="radio" aria-checked="${formData.seating === 'bar'}" class="${formData.seating === 'bar' ? 'on' : ''}" data-seating="bar">בר</button>
+    </div>
     <div class="pickers">
       ${box('pickGuests', 'סועדים', formData.guests ? `${formData.guests} סועדים` : '')}
       ${box('pickDate', 'תאריך', formData.date ? dateLabel(formData.date) : '')}
@@ -312,16 +326,26 @@ function renderBooking() {
     </div>
     ${sameDayApproval ? `<p class="notice" id="approvalNote">הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
     ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
+    ${offerBar ? `<div class="bar-offer" id="barOffer"><p>אין שולחנות פנויים בתאריך הזה, אבל יש מקום בבר.</p>
+      <button type="button" class="btn-outline" id="switchBar">להזמין בבר</button></div>` : ''}
     ${found ? detailsHtml() : `<button type="button" class="primary" id="findBtn" ${ready ? '' : 'disabled'}>מצאו לי מקום</button>`}
   `;
+  stepArea.querySelectorAll('[data-seating]').forEach(b => b.addEventListener('click', () => {
+    formData.seating = b.dataset.seating;
+    if (formData.seating === 'bar' && formData.guests > BAR_MAX) formData.guests = null;   // the bar takes groups of up to 4
+    choiceChanged();
+  }));
   document.getElementById('pickGuests').addEventListener('click', openGuestsSheet);
   document.getElementById('pickDate').addEventListener('click', openDateSheet);
   document.getElementById('pickTime').addEventListener('click', openTimeSheet);
+  document.getElementById('switchBar')?.addEventListener('click', () => {
+    formData.seating = 'bar'; offerBar = false; renderBooking(); findPlace();
+  });
   if (found) bindDetails();
   else document.getElementById('findBtn').addEventListener('click', findPlace);
 }
 // Any change to guests, date or time means a new search.
-function choiceChanged() { found = false; warning = null; renderBooking(); }
+function choiceChanged() { found = false; offerBar = false; warning = null; renderBooking(); }
 
 // A panel that slides up from the bottom of the screen (closes on ✕ or a tap outside it).
 function openSheet(title, body, bind) {
@@ -341,9 +365,9 @@ function closeSheet() { const s = document.getElementById('sheet'); if (s) s.rem
 
 function openGuestsSheet() {
   openSheet('כמה תהיו?', () => `
-    <div class="choice-grid">${Array.from({ length: 10 }, (_, i) => i + 1).map(n =>
+    <div class="choice-grid">${Array.from({ length: formData.seating === 'bar' ? BAR_MAX : 10 }, (_, i) => i + 1).map(n =>
       `<button type="button" data-guests="${n}" class="${n === formData.guests ? 'selected' : ''}">${n}</button>`).join('')}</div>
-    <p class="hint">עד 10 סועדים</p>`,
+    <p class="hint">${formData.seating === 'bar' ? `בבר: עד ${BAR_MAX} סועדים בהזמנה` : 'עד 10 סועדים בהזמנה'}</p>`,
   el => el.querySelectorAll('[data-guests]').forEach(b => b.addEventListener('click', () => {
     formData.guests = Number(b.dataset.guests); choiceChanged();
   })));
@@ -413,14 +437,16 @@ async function findPlace() {
     formData.time = null;
     return renderBooking();
   }
-  const { data, error } = await db.rpc('check_availability', { p_date: formData.date, p_guests: formData.guests });
+  const { data, error } = await db.rpc('check_availability', { p_date: formData.date, p_guests: formData.guests, p_seating: formData.seating });
   if (error) {
     console.error('Availability check error:', error);
     warning = 'שגיאה בבדיקת זמינות, נסו שוב.';
-  } else if (!data) {
-    warning = `אין מקום ל-${formData.guests} סועדים בתאריך הזה. נסו תאריך אחר או קבוצה קטנה יותר.`;
-  } else {
+  } else if (data === 'yes') {
     found = true;
+  } else if (data === 'bar') {
+    offerBar = true;
+  } else {
+    warning = `אין מקום ${formData.seating === 'bar' ? 'בבר ' : ''}ל-${formData.guests} סועדים בתאריך הזה. נסו תאריך אחר${formData.seating === 'bar' ? '' : ' או קבוצה קטנה יותר'}.`;
   }
   renderBooking();
   if (found) document.getElementById('details').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -493,7 +519,8 @@ async function submitBooking() {
     p_name: formData.name,
     p_phone: formData.phone,
     p_guests: formData.guests,
-    p_note: formData.note || null
+    p_note: formData.note || null,
+    p_seating: formData.seating
   });
 
   if (error || !data || !data[0]) {
@@ -512,20 +539,21 @@ async function submitBooking() {
     const pending = result === 'pending';
     formData.bookingId = data[0].reservation_id;
     formData.pending = pending;
+    formData.placed = data[0].seating || formData.seating;   // where the booking ended up: 'table' or 'bar'
     const token = data[0].booking_token;     // the customer's private link (booking.html#<token>)
     const title = pending ? 'הבקשה התקבלה' : 'ההזמנה אושרה';
     if (token) rememberBooking({ token, date: formData.date, time: formData.time, guests: formData.guests });
-    shareText = `${pending ? 'בקשת הזמנה (ממתינה לאישור)' : 'אישור הזמנה'} - ${BUSINESS_NAME}\n${formData.name}, שולחן ל-${formData.guests} סועדים\n${formatDisplay(formData.date)} בשעה ${formData.time}`
+    shareText = `${pending ? 'בקשת הזמנה (ממתינה לאישור)' : 'אישור הזמנה'} - ${BUSINESS_NAME}\n${formData.name}, ${placeText(formData.placed, formData.guests)}\n${formatDisplay(formData.date)} בשעה ${formData.time}`
       + (token ? `\nלצפייה, שינוי או ביטול: ${bookingUrl(token)}` : '');
     const waText = encodeURIComponent(shareText);
     stepArea.innerHTML = `
       <div class="success">
         <img class="card-preview" id="cardPreview" hidden
-          alt="${title}${pending ? ' וממתינה לאישור' : ''}: ${esc(formData.name)}, שולחן ל-${formData.guests} סועדים, ${formatDisplay(formData.date)} בשעה ${formData.time}">
+          alt="${title}${pending ? ' וממתינה לאישור' : ''}: ${esc(formData.name)}, ${placeText(formData.placed, formData.guests)}, ${formatDisplay(formData.date)} בשעה ${formData.time}">
         <div class="card-fallback" id="cardFallback" hidden>
           <h2>${title}</h2>
           ${pending ? '<p>ממתינה לאישור. נעדכן אתכם בוואטסאפ.</p>' : ''}
-          <p>${esc(formData.name)}, שולחן ל-${formData.guests} סועדים</p>
+          <p>${esc(formData.name)}, ${placeText(formData.placed, formData.guests)}</p>
           <p>${formatDisplay(formData.date)} בשעה ${formData.time}</p>
         </div>
       </div>
@@ -538,14 +566,20 @@ async function submitBooking() {
     `;
     if (!pending && !IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
     prepareCard();
+  } else if (result === 'bar_available') {
+    found = false; offerBar = true; warning = null;
+    renderBooking();
   } else if (result === 'full' || result === 'closed') {
     found = false;
     warning = result === 'full' ? 'התאריך הזה התמלא בדיוק עכשיו. נסו תאריך אחר.' : 'ההזמנות המקוונות לתאריך הזה נסגרו.';
     formData.date = null;
     renderBooking();
   } else {
-    errEl.textContent = result === 'invalid' ? 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.'
-      : 'השעה שבחרתם כבר לא זמינה. לחצו על השעה למעלה ובחרו שעה מאוחרת יותר.';
+    errEl.textContent = {
+      invalid: 'אחד הפרטים לא תקין. בדקו את הפרטים ונסו שוב.',
+      duplicate: 'כבר יש הזמנה על מספר הטלפון הזה לערב הזה. אפשר לשנות אותה דרך הקישור האישי שלה.',
+      too_many: 'נעשו כבר כמה הזמנות מהחיבור הזה בשעה האחרונה. נסו שוב מאוחר יותר.'
+    }[result] || 'השעה שבחרתם כבר לא זמינה. לחצו על השעה למעלה ובחרו שעה מאוחרת יותר.';
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'שריינו לי שולחן';
@@ -559,7 +593,7 @@ async function submitBooking() {
 // The card itself is drawn by drawBookingCard() in card.js (shared with booking.html).
 function cardData() {
   return { business: BUSINESS_NAME, name: formData.name, guests: formData.guests, time: formData.time, bookingId: formData.bookingId,
-    pending: formData.pending, date: formData.date };
+    pending: formData.pending, date: formData.date, seating: formData.placed };
 }
 let cardFile = null, shareText = '';
 
@@ -614,7 +648,7 @@ function visitTimes() {
   const at = (hh, mm) => `${day}T${pad2(hh)}${pad2(mm)}00`;
   return { start: at(h, m), end: at(h + VISIT_HOURS, m) };   // arrivals end at 21:00, so this stays on the same day
 }
-function calendarTitle() { return `${BUSINESS_NAME} - שולחן ל-${formData.guests}`; }
+function calendarTitle() { return `${BUSINESS_NAME} - ${placeText(formData.placed, formData.guests)}`; }
 function googleCalendarUrl() {
   const t = visitTimes();
   const q = new URLSearchParams({ action: 'TEMPLATE', text: calendarTitle(), dates: `${t.start}/${t.end}`,

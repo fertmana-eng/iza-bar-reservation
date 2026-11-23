@@ -2,8 +2,9 @@
 // It keeps a small in-memory database (window.__db) and records every call (window.__ops).
 // Options are read from window.__cfg:
 //   spots (number returned by available_spots, default 10),
-//   available (result of check_availability, default true),
-//   bookResult ('confirmed' by default; 'pending', 'full', 'closed', 'invalid', 'invalid_time'),
+//   available (answer of check_availability: 'yes' by default, 'bar' = no table but the bar has room, 'no'),
+//   bookResult ('confirmed' by default; 'pending', 'full', 'closed', 'invalid', 'invalid_time',
+//     'duplicate', 'too_many', 'bar_available'); the seating returned is the one asked for (default 'table'),
 //   rpcError (name of an RPC that should fail), reservations (rows for the manager page),
 //   token (secret returned with a new booking), bookings (rows for booking.html, with access_token),
 //   changeResult (answer of change_booking; 'confirmed' by default),
@@ -64,9 +65,10 @@
       window.__ops.push({rpc:name,args});
       if(cfg.rpcError===name)return {data:null,error:{message:'failed'}};
       if(name==='available_spots')return {data:cfg.spots??10,error:null};
-      if(name==='check_availability')return {data:cfg.available??true,error:null};
+      if(name==='check_availability')return {data:cfg.available??'yes',error:null};
       if(name==='book_reservation'){const ok=['confirmed','pending'].includes(cfg.bookResult||'confirmed');
-        return {data:[{result:cfg.bookResult||'confirmed',reservation_id:ok?101:null,booking_token:ok?(cfg.token===undefined?'11111111-2222-4333-8444-555555555555':cfg.token):null}],error:null};}
+        return {data:[{result:cfg.bookResult||'confirmed',reservation_id:ok?101:null,booking_token:ok?(cfg.token===undefined?'11111111-2222-4333-8444-555555555555':cfg.token):null,
+          seating:ok?(args.p_seating||'table'):null}],error:null};}
       // the personal booking link's functions (10_booking_link.sql)
       const bk=(db.bookings||[]).find(b=>b.access_token===args?.p_token);
       if(name==='get_booking'){if(!bk)return {data:[],error:null};const {access_token,...row}=bk;return {data:[row],error:null};}
