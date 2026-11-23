@@ -322,7 +322,7 @@ with a fixed clock in Israel time.
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
   differences, or differences the owner asked for.
 - **Real-database check:** `tests/db/checks.sql` (rolled back; reports
-  `DB CHECKS: ALL n PASSED`; 67 after 15_seating_and_limits.sql, 23 Nov 2026), run by the security check through the connector.
+  `DB CHECKS: ALL n PASSED`; 68 after 16_change_seating.sql, 23 Nov 2026), run by the security check through the connector.
   Not run on GitHub on purpose (it would need the database password there).
 - **The fake database has no access rules**, and its `check_availability`
   answers even though that function may not exist in the real database.
@@ -369,6 +369,10 @@ with a fixed clock in Israel time.
 
 ## Lessons learned
 
+- **In `tests/db/checks.sql`, make a change and read it back in separate
+  steps.** Within one SQL statement, a read function (get_booking) sees the
+  data as it was when the statement started, so `change(...) <> 'x' or
+  read() <> 'y'` reads the old value and fails although the change worked.
 - **In `tests/db/checks.sql`, don't name a table alias `r`**: the block
   already has a loop variable `r`, and PL/pgSQL mixes them up ("record r has
   no field ...").

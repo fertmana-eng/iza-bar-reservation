@@ -189,12 +189,18 @@ begin
   select b.booking_token into tok from public.book_reservation(d+1,'18:30','בדיקת בר','052-2000001',2,null,'bar') b;
   if tok is null or (select g.seating from public.get_booking(tok) g)<>'bar'
     then failed:=failed||'the link does not show the bar'::text;
-  elsif public.change_booking(tok, d+1, '19:00', 3)<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'bar'
+  elsif public.change_booking(tok, d+1, '19:00', 3)<>'confirmed'
+    then failed:=failed||'a change of guests at the bar is refused'::text;
+  elsif (select g.seating from public.get_booking(tok) g)<>'bar'
     then failed:=failed||'a change does not keep the bar'::text;
   elsif public.change_booking(tok, d, '19:00', 3)<>'duplicate'
     then failed:=failed||'a change can move onto an evening the phone already booked'::text;
-  elsif public.change_booking(tok, d+1, '19:00', 3, 'table')<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'table'
-    then failed:=failed||'a change cannot switch from the bar to a table (16)'::text; end if;
+  else
+    -- the change and the read-back are separate steps (one step sees the data as it was when it started)
+    ok_list := public.change_booking(tok, d+1, '19:00', 3, 'table');
+    if ok_list<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'table'
+      then failed:=failed||('a change cannot switch from the bar to a table (16): '||ok_list); end if;
+  end if;
   total:=total+1;
   perform set_config('request.headers','{"x-forwarded-for":"203.0.113.9, 10.0.0.1"}',true);
   select string_agg(b.result,',' order by ph) into ok_list
@@ -216,7 +222,8 @@ begin
     then failed:=failed||'no table left: the bar is not offered'::text; end if;
   total:=total+1;
   select b.booking_token into tok from public.book_reservation(d+4,'19:00','בדיקת מעבר','055-5000002',2,null,'bar') b;
-  if public.change_booking(tok, d+4, '19:00', 2, 'table')<>'bar_available' or (select g.seating from public.get_booking(tok) g)<>'bar'
+  ok_list := public.change_booking(tok, d+4, '19:00', 2, 'table');
+  if ok_list<>'bar_available' or (select g.seating from public.get_booking(tok) g)<>'bar'
      or public.change_booking(tok, d+4, '19:00', 2, 'nope')<>'invalid'
     then failed:=failed||'a change to a table when none is left is not answered with the bar (16)'::text; end if;
 
