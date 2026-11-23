@@ -15,18 +15,20 @@ colour codes, so a change in one place changes everything.
 
 IZAZOO logo (24 px high) + "//" + **עיזה בר** (extra bold), both in the
 muted grey (#6b6862, the colour of "ההזמנות שלי"). **Their letters are exactly
-as tall as the logo's** (20 px of ink) and centred with it: that takes a 36 px
-font for the words and 26 px for "//", because a font size includes empty
-room above and below the letters (measured on the page, 23 Nov 2026). Same on
+as tall as the logo's** (20 px of ink) and centred with it: with Rubik that
+takes a 34 px font for the words (moved up 2 px) and 24 px for "//", because a
+font size includes empty room above and below the letters (measured in pixels
+on the page, 23 Nov 2026; re-measure if the font changes). Same on
 every page, the tablet included.
 
 ## Font (decided, applied 23 Nov 2026)
 
-**Heebo** everywhere (owner's choice after a side-by-side preview with
-Assistant and Rubik), so the app looks the same on every phone; the booking
-card picture uses it too. Stored on our own site (`assets/fonts/`, Hebrew and
-Latin parts, every weight in one file, licence `OFL-Heebo.txt`), not loaded
-from Google. Fallback while it loads on the first visit: Arial.
+**Rubik** everywhere, the booking card included (owner's choice: rounder and
+wider; replaced Heebo the same day after previews of Heebo, Assistant, Rubik,
+Fredoka and Varela Round), so the app looks the same on every phone. Stored
+on our own site (`assets/fonts/rubik.css`, Hebrew and Latin parts, weights
+300–900 in one file, licence `OFL-Rubik.txt`), not loaded from Google.
+Fallback while it loads on the first visit: Arial.
 
 ## Text sizes (6, instead of 13 today)
 

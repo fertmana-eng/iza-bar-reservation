@@ -11,15 +11,15 @@
 <meta name="apple-mobile-web-app-title" content="הזמנות עיזה בר">
 <meta name="referrer" content="no-referrer">
 <title>ההזמנה שלי</title>
-<link rel="stylesheet" href="assets/fonts/heebo.css">
+<link rel="stylesheet" href="assets/fonts/rubik.css">
 <link rel="stylesheet" href="assets/theme.css">
 <style>
   button, input, select, textarea { font-family: inherit; }
   /* Design rules: DESIGN.md; sizes, weights, colours, corners and the header come from
-     assets/theme.css (shared with the booking page). Font: Heebo (assets/fonts). */
+     assets/theme.css (shared with the booking page). Font: Rubik (assets/fonts). */
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: 'Heebo', Arial, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+  body { font-family: 'Rubik', Arial, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
   /* same spacing as the booking page: 16px around the white box, 22px inside */
   .page { max-width: 420px; width: auto; margin: 16px auto 64px; padding: 22px 18px; background: var(--card);
     border: 1px solid var(--line); border-radius: var(--r-box); }
@@ -275,7 +275,7 @@ function render() {
 }
 
 async function drawCard() {
-  try { await document.fonts.load('900 100px Heebo'); } catch (e) {}
+  try { await document.fonts.load('900 100px Rubik'); } catch (e) {}
   const img = document.getElementById('cardPreview');
   if (!img) return;
   try {

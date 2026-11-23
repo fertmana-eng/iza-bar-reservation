@@ -414,7 +414,7 @@ describe('install as an app (owner, Nov 2026)',()=>{
 });
 
 describe('one font on every phone (owner, Nov 2026)',()=>{
-  test('all pages use our own copy of Heebo, never Google, for text and form controls',async()=>{
+  test('all pages use our own copy of Rubik, never Google, for text and form controls',async()=>{
     const T='11111111-2222-4333-8444-555555555555';
     for(const [file,cfg] of [['',{}],['booking.html#'+T,{bookings:[{access_token:T,id:1,status:'confirmed',reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true}]}],['admin.html',{}],['admin.html',{noSession:true}]]){
       const {page,ctx}=await open({file,time:MORNING,cfg});
@@ -423,9 +423,9 @@ describe('one font on every phone (owner, Nov 2026)',()=>{
       const r=await page.evaluate(async()=>{await document.fonts.ready;
         const el=document.querySelector('button')||document.body;
         return {body:getComputedStyle(document.body).fontFamily,button:getComputedStyle(el).fontFamily,
-          loaded:document.fonts.check('700 16px Heebo','שלום')&&[...document.fonts].some(f=>f.family.replace(/"/g,'')==='Heebo'&&f.status==='loaded')};});
-      assert.match(r.body,/^"?Heebo"?,/,file||'index.html');assert.match(r.button,/^"?Heebo"?,/);
-      assert.ok(r.loaded,'Heebo is loaded from our own site');
+          loaded:document.fonts.check('700 16px Rubik','שלום')&&[...document.fonts].some(f=>f.family.replace(/"/g,'')==='Rubik'&&f.status==='loaded')};});
+      assert.match(r.body,/^"?Rubik"?,/,file||'index.html');assert.match(r.button,/^"?Rubik"?,/);
+      assert.ok(r.loaded,'Rubik is loaded from our own site');
       assert.deepEqual(asked.filter(u=>/fonts\.(googleapis|gstatic)/.test(u)),[]);
       await ctx.close();
     }

@@ -10,16 +10,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="הזמנות עיזה בר">
 <title>הזמנת שולחן</title>
-<link rel="stylesheet" href="assets/fonts/heebo.css">
+<link rel="stylesheet" href="assets/fonts/rubik.css">
 <link rel="stylesheet" href="assets/theme.css">
 <style>
   button, input, select, textarea { font-family: inherit; }
   /* Design rules: DESIGN.md; every size, weight, colour and corner comes from
-     assets/theme.css (shared with the other pages). Font: Heebo (assets/fonts). */
+     assets/theme.css (shared with the other pages). Font: Rubik (assets/fonts). */
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: 'Heebo', Arial, sans-serif;
+    font-family: 'Rubik', Arial, sans-serif;
     background: var(--paper);
     color: var(--ink);
     min-height: 100vh;
@@ -587,7 +587,7 @@ function rememberBooking(b) {
 }
 async function prepareCard() {
   cardFile = null;
-  try { await document.fonts.load('900 100px Heebo'); } catch (e) {}
+  try { await document.fonts.load('900 100px Rubik'); } catch (e) {}
   const canvas = document.createElement('canvas');
   const preview = document.getElementById('cardPreview'), fallback = document.getElementById('cardFallback');
   // the card is the confirmation; the plain text shows only if the picture can't be made
