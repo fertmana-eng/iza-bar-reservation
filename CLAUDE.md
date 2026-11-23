@@ -117,7 +117,11 @@ Same owner as the IzaZoo management app (repository
   bolding, text colours, boxes"): `DESIGN.md`. **Proposed, waiting for the
   owner's OK**; then a shared `assets/theme.css` and the pages brought into
   line one at a time (booking page → personal page → manager page), each
-  checked live by the owner. New work follows `DESIGN.md`.
+  checked live by the owner. New work follows `DESIGN.md`. Owner, 23 Nov
+  2026: will work more on the overall design first; the health check (first
+  one for this project, offered after ~25 changes) comes later, after that.
+  The IzaZoo management app is on hold (owner), so the quicker-checks rule
+  was not copied there.
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
