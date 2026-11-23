@@ -48,8 +48,10 @@ Same owner as the IzaZoo management app (repository
   stayed open.
 - **Table or bar** (owner, 23 Nov 2026; `15_seating_and_limits.sql`): a
   "שולחן | בר" choice above the three boxes, nothing chosen at the start.
-  Bar: groups of 1–4 only (the guests panel shows 1–4; a bigger number is
-  cleared when switching to the bar). Table chosen but none left while the
+  Bar: groups of 1–4 only; **the number of guests is never changed for
+  the customer** (owner): bar with more than 4 shows "בבר אפשר עד 4
+  סועדים. הקטינו את מספר הסועדים או בחרו שולחן." and the search waits
+  (the guests panel always offers 1–10). Table chosen but none left while the
   bar has room: "אין שולחנות פנויים... אבל יש מקום בבר" with "להזמין בבר"
   (one tap switches and searches again); no "no preference" option (owner).
   The card, texts and personal page say where the booking ended up ("שולחן

@@ -308,7 +308,9 @@ function renderBooking() {
   closeSheet();
   const now = israelNow();
   const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
-  const ready = formData.seating && formData.guests && formData.date && formData.time;
+  // the bar takes groups of up to 4; the number is never changed for the customer (owner, Nov 2026)
+  const barOver = formData.seating === 'bar' && formData.guests > BAR_MAX;
+  const ready = formData.seating && formData.guests && formData.date && formData.time && !barOver;
   const box = (id, label, value) => `<button type="button" class="pick${value ? ' set' : ''}" id="${id}" aria-label="${label}: ${value || 'לא נבחר'}">
       <span class="pick-value">${value || label}</span><span class="pick-caret" aria-hidden="true">▾</span></button>`;
   stepArea.innerHTML = `
@@ -325,6 +327,7 @@ function renderBooking() {
       ${box('pickTime', 'שעה', formData.time || '')}
     </div>
     ${sameDayApproval ? `<p class="notice" id="approvalNote">הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
+    ${barOver ? `<p class="warning" id="barLimit">בבר אפשר עד ${BAR_MAX} סועדים. הקטינו את מספר הסועדים או בחרו שולחן.</p>` : ''}
     ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
     ${offerBar ? `<div class="bar-offer" id="barOffer"><p>אין שולחנות פנויים בתאריך הזה, אבל יש מקום בבר.</p>
       <button type="button" class="btn-outline" id="switchBar">להזמין בבר</button></div>` : ''}
@@ -332,7 +335,6 @@ function renderBooking() {
   `;
   stepArea.querySelectorAll('[data-seating]').forEach(b => b.addEventListener('click', () => {
     formData.seating = b.dataset.seating;
-    if (formData.seating === 'bar' && formData.guests > BAR_MAX) formData.guests = null;   // the bar takes groups of up to 4
     choiceChanged();
   }));
   document.getElementById('pickGuests').addEventListener('click', openGuestsSheet);
@@ -365,9 +367,9 @@ function closeSheet() { const s = document.getElementById('sheet'); if (s) s.rem
 
 function openGuestsSheet() {
   openSheet('כמה תהיו?', () => `
-    <div class="choice-grid">${Array.from({ length: formData.seating === 'bar' ? BAR_MAX : 10 }, (_, i) => i + 1).map(n =>
+    <div class="choice-grid">${Array.from({ length: 10 }, (_, i) => i + 1).map(n =>
       `<button type="button" data-guests="${n}" class="${n === formData.guests ? 'selected' : ''}">${n}</button>`).join('')}</div>
-    <p class="hint">${formData.seating === 'bar' ? `בבר: עד ${BAR_MAX} סועדים בהזמנה` : 'עד 10 סועדים בהזמנה'}</p>`,
+    <p class="hint">עד 10 סועדים בהזמנה</p>`,
   el => el.querySelectorAll('[data-guests]').forEach(b => b.addEventListener('click', () => {
     formData.guests = Number(b.dataset.guests); choiceChanged();
   })));
