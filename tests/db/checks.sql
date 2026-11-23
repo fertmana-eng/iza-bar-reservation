@@ -192,7 +192,9 @@ begin
   elsif public.change_booking(tok, d+1, '19:00', 3)<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'bar'
     then failed:=failed||'a change does not keep the bar'::text;
   elsif public.change_booking(tok, d, '19:00', 3)<>'duplicate'
-    then failed:=failed||'a change can move onto an evening the phone already booked'::text; end if;
+    then failed:=failed||'a change can move onto an evening the phone already booked'::text;
+  elsif public.change_booking(tok, d+1, '19:00', 3, 'table')<>'confirmed' or (select g.seating from public.get_booking(tok) g)<>'table'
+    then failed:=failed||'a change cannot switch from the bar to a table (16)'::text; end if;
   total:=total+1;
   perform set_config('request.headers','{"x-forwarded-for":"203.0.113.9, 10.0.0.1"}',true);
   select string_agg(b.result,',' order by ph) into ok_list
@@ -212,6 +214,11 @@ begin
      or (select b.result from public.book_reservation(d+4,'19:00','בדיקת שולחן','055-5000001',2,null,'table') b)<>'bar_available'
      or (select b.seating from public.book_reservation(d+4,'19:00','בדיקת שולחן','055-5000001',2,null,'bar') b)<>'bar'
     then failed:=failed||'no table left: the bar is not offered'::text; end if;
+  total:=total+1;
+  select b.booking_token into tok from public.book_reservation(d+4,'19:00','בדיקת מעבר','055-5000002',2,null,'bar') b;
+  if public.change_booking(tok, d+4, '19:00', 2, 'table')<>'bar_available' or (select g.seating from public.get_booking(tok) g)<>'bar'
+     or public.change_booking(tok, d+4, '19:00', 2, 'nope')<>'invalid'
+    then failed:=failed||'a change to a table when none is left is not answered with the bar (16)'::text; end if;
 
   -- ---------- as the logged-in manager ----------
   perform set_config('role','authenticated',true);

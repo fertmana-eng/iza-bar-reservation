@@ -53,9 +53,13 @@ Same owner as the IzaZoo management app (repository
   bar has room: "אין שולחנות פנויים... אבל יש מקום בבר" with "להזמין בבר"
   (one tap switches and searches again); no "no preference" option (owner).
   The card, texts and personal page say where the booking ended up ("שולחן
-  ל-3 סועדים" / "בבר, ל-2 סועדים", `placeText()` in card.js). A customer's
-  change keeps the area they booked (the personal page offers 1–4 guests
-  for a bar booking). Manager bookings are unaffected.
+  ל-3 סועדים" / "בבר, ל-2 סועדים", `placeText()` in card.js). On the
+  personal page a change can also switch table ↔ bar (owner, 23 Nov 2026;
+  `16_change_seating.sql`, `change_booking(..., p_seating)`): an "איפה"
+  select next to date / time / guests; bar → guests 1–4 (a bigger number
+  becomes 4) with a hint; switching to a table when none is left answers
+  'bar_available' ("אין שולחן פנוי... אבל יש מקום בבר"). Without a choice
+  a change keeps the area. Manager bookings are unaffected.
 - **Double bookings** (owner, 23 Nov 2026; same file): one booking per phone
   number per evening (digits compared, +972 read as 0; also when a change
   moves to another evening) → "כבר יש הזמנה על מספר הטלפון הזה לערב
@@ -312,7 +316,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (81 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (83 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
