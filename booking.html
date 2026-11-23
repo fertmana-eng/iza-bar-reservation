@@ -46,7 +46,7 @@
   label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
   .section-title { font-weight: 700; font-size: 15px; margin: 0 0 12px; }
   .change-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 16px 0 18px; margin: 0 0 22px; }
-  .change-grid { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr; gap: 10px; }
+  .change-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .change-grid .field { margin-bottom: 0; }
   input[type=date], select { width: 100%; height: 48px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 10px;
     padding: 0 10px; font-size: 16px; font-family: inherit; color: var(--ink); }
@@ -200,7 +200,7 @@ async function load(quiet) {
   }
   const b = data && data[0];
   if (!b) return showNotFound();
-  const changed = !booking || ['status', 'note', 'can_change', 'can_cancel', 'reservation_date', 'arrival_time', 'guests', 'prev_date']
+  const changed = !booking || ['status', 'note', 'can_change', 'can_cancel', 'reservation_date', 'arrival_time', 'guests', 'prev_date', 'seating']
     .some(k => booking[k] !== b[k]);
   booking = b;
   remember(b);
@@ -245,9 +245,12 @@ function render() {
           <div class="field"><label for="dateInput">תאריך</label>
             <input type="date" id="dateInput" value="${b.reservation_date}" min="${israelNow().date}" max="${addDays(israelNow().date, 30)}"></div>
           <div class="field"><label for="timeInput">שעה</label><select id="timeInput"></select></div>
-          <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput">
-            ${Array.from({ length: b.seating === 'bar' ? 4 : 10 }, (_, i) => `<option value="${i + 1}" ${i + 1 === b.guests ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
+          <div class="field"><label for="seatingInput">איפה</label><select id="seatingInput">
+            <option value="table" ${b.seating !== 'bar' ? 'selected' : ''}>שולחן</option>
+            <option value="bar" ${b.seating === 'bar' ? 'selected' : ''}>בר</option></select></div>
+          <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput"></select></div>
         </div>
+        <p class="hint" id="barHint" hidden>בבר: עד 4 סועדים בהזמנה</p>
         <button type="button" class="btn-outline" id="saveChange">שמירת השינויים</button>
       </div>
       <div class="field">
@@ -269,6 +272,8 @@ function render() {
   document.getElementById('pushBtn')?.addEventListener('click', enablePush);
   if (b.can_change) {
     fillTimes(b.arrival_time.slice(0, 5));
+    fillGuests(b.guests);
+    document.getElementById('seatingInput').addEventListener('change', () => fillGuests(Number(document.getElementById('guestsInput').value)));
     document.getElementById('dateInput').addEventListener('change', () => fillTimes(document.getElementById('timeInput').value));
     document.getElementById('saveChange').addEventListener('click', saveChange);
   }
@@ -288,6 +293,14 @@ async function drawCard() {
   } catch (e) { /* the status line and buttons are enough without the picture */ }
 }
 
+// The bar takes groups of 1-4 (as on the booking page): a bigger group switching to the bar becomes 4
+function fillGuests(keep) {
+  const bar = document.getElementById('seatingInput').value === 'bar', max = bar ? 4 : 10, sel = document.getElementById('guestsInput');
+  const value = Math.min(keep, max);
+  sel.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}" ${i + 1 === value ? 'selected' : ''}>${i + 1}</option>`).join('');
+  document.getElementById('barHint').hidden = !bar;
+}
+
 function fillTimes(keep) {
   const date = document.getElementById('dateInput').value, times = arrivalTimes(date), sel = document.getElementById('timeInput');
   sel.innerHTML = times.length ? times.map(t => `<option ${t === keep ? 'selected' : ''}>${t}</option>`).join('')
@@ -298,11 +311,12 @@ function fillTimes(keep) {
 async function saveChange() {
   const date = document.getElementById('dateInput').value, time = document.getElementById('timeInput').value;
   const guests = Number(document.getElementById('guestsInput').value);
+  const seating = document.getElementById('seatingInput').value;
   if (!date || !time) return;
   const wasConfirmed = booking.status === 'confirmed';
   const btn = document.getElementById('saveChange');
   btn.disabled = true; btn.textContent = 'שומר...';
-  const { data, error } = await db.rpc('change_booking', { p_token: token, p_date: date, p_time: time, p_guests: guests });
+  const { data, error } = await db.rpc('change_booking', { p_token: token, p_date: date, p_time: time, p_guests: guests, p_seating: seating });
   const texts = {
     confirmed: { ok: true, text: 'השינוי נשמר ואושר.' },
     pending: { ok: true, text: wasConfirmed ? 'השינוי נשלח לאישור. נעדכן אתכם בוואטסאפ. עד אז ההזמנה המקורית שמורה לכם.'
@@ -310,6 +324,7 @@ async function saveChange() {
     unchanged: { text: 'לא שיניתם כלום.' },
     full: { text: 'אין מקום מתאים בשינוי הזה. ההזמנה נשארה כמו שהייתה.' },
     duplicate: { text: 'כבר יש הזמנה אחרת על מספר הטלפון הזה בערב הזה. ההזמנה נשארה כמו שהייתה.' },
+    bar_available: { text: 'אין שולחן פנוי בשינוי הזה, אבל יש מקום בבר: בחרו "בר" ושמרו שוב. ההזמנה נשארה כמו שהייתה.' },
     closed: { text: 'אי אפשר להזמין להיום אחרי 20:00. ההזמנה נשארה כמו שהייתה.' },
     invalid_time: { text: 'השעה שבחרתם כבר לא זמינה. בחרו שעה מאוחרת יותר.' },
     locked: { text: 'כבר אי אפשר לשנות את ההזמנה. כתבו לנו בוואטסאפ.' }

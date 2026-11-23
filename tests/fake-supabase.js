@@ -77,7 +77,7 @@
         if(res==='confirmed'||res==='pending'){
           if(res==='pending'&&bk.status==='confirmed')Object.assign(bk,{prev_date:bk.reservation_date,prev_time:bk.arrival_time,prev_guests:bk.guests});
           if(res==='confirmed')Object.assign(bk,{prev_date:null,prev_time:null,prev_guests:null});
-          Object.assign(bk,{reservation_date:args.p_date,arrival_time:args.p_time+':00',guests:args.p_guests,status:res});}
+          Object.assign(bk,{reservation_date:args.p_date,arrival_time:args.p_time+':00',guests:args.p_guests,status:res,seating:args.p_seating||bk.seating});}
         return {data:res,error:null};}
       if(name==='save_push_subscription'){if(!bk)return {data:'not_found',error:null};(db.push=db.push||[]).push(args);return {data:'saved',error:null};}
       // the manager's floor actions (13_manager_floor.sql)
