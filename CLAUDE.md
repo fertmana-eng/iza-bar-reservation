@@ -93,9 +93,11 @@ Same owner as the IzaZoo management app (repository
   #2f4a3d buttons, the system font) with the red IZAZOO logo in a light
   header. Heebo is still loaded only because the booking card picture uses
   it. The card picture itself (card.js) keeps the old black/cream look.
-- **IZAZOO logo** (owner, 22 Nov 2026): replaces "עיזה בר" in the header of
-  `index.html` and `booking.html`, and sits at the start of the tablet's top
-  bar and above its login (red, `assets/izazoo-logo-red.png`; a white copy
+- **IZAZOO logo** (owner, 22 Nov 2026) in the header of `index.html` and
+  `booking.html`, with **"עיזה בר" next to it** (owner, 23 Nov 2026: IZAZOO
+  is the group, עיזה בר the business this app belongs to; replaced "הזמנת
+  מקומות" / "ההזמנה שלי"); at the start of the tablet's top bar (followed by
+  "עיזה בר") and above its login ("עיזה בר · ניהול הזמנות") (red, `assets/izazoo-logo-red.png`; a white copy
   `assets/izazoo-logo-white.png` exists for dark backgrounds). Both were cut
   from the IzaZoo app icon (`icon-512.png` in the IzaZoo repo, white IZAZOO
   on #D12026) with a see-through background. Still "עיזה בר": the WhatsApp

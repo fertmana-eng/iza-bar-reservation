@@ -414,7 +414,7 @@ describe('install as an app (owner, Nov 2026)',()=>{
 });
 
 describe('IZAZOO logo',()=>{
-  test('the red logo replaces the bar name in the booking pages\' header and sits on the tablet screen (same look everywhere)',async()=>{
+  test('the red IZAZOO logo with "עיזה בר" next to it on the booking pages and the tablet screen (same look everywhere)',async()=>{
     const logo=page=>page.evaluate(()=>[...document.querySelectorAll('img.venue-logo, img.brand-logo')].filter(i=>i.offsetParent)
       .map(i=>[i.getAttribute('src'),i.alt,i.complete&&i.naturalWidth>0]));
     for(const [file,src,cfg] of [['','assets/izazoo-logo-red.png',{}],
@@ -423,7 +423,9 @@ describe('IZAZOO logo',()=>{
       const {page,ctx}=await open({file,time:MORNING,cfg});
       await page.waitForFunction(()=>[...document.images].filter(i=>/izazoo-logo/.test(i.src)).every(i=>i.complete));
       assert.deepEqual(await logo(page),[[src,'IZAZOO',true]],file||'index.html');
-      assert.doesNotMatch(await page.evaluate(()=>document.querySelector('.header-band')?.innerText||''),/עיזה בר/);
+      // IZAZOO is the group; the business's name sits next to it (owner, Nov 2026)
+      const business=await page.evaluate(()=>(document.querySelector('.venue-tag, .brand-business, .login-wrap h1')||{}).innerText||'');
+      assert.match(business,/עיזה בר/,file||'index.html');
       await ctx.close();
     }
   });
