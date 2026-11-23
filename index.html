@@ -334,7 +334,7 @@ function renderBooking() {
       ${box('pickDate', 'תאריך', formData.date ? dateLabel(formData.date) : '')}
       ${box('pickTime', 'שעה', formData.time || '')}
     </div>
-    ${sameDayApproval ? `<p class="notice" id="approvalNote"><span aria-hidden="true">⏳ </span>הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
+    ${sameDayApproval ? `<p class="notice" id="approvalNote"><span aria-hidden="true">⏳ </span>הזנת הזמנה בשעה זו מצריכה אישור שלנו. נחזור אליכם בהקדם</p>` : ''}
     ${barOver ? `<p class="warning" id="barLimit">בבר אפשר עד ${BAR_MAX} סועדים. הקטינו את מספר הסועדים או בחרו שולחן.</p>` : ''}
     ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
     ${offerBar ? `<div class="bar-offer" id="barOffer"><p>אין שולחנות פנויים בתאריך הזה, אבל יש מקום בבר.</p>

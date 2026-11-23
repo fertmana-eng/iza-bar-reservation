@@ -80,7 +80,7 @@ describe('customer booking page',()=>{
     const {page,ctx}=await open({time:'2026-11-22T17:00:00+02:00'});
     assert.equal(await page.isVisible('#approvalNote'),false);
     await choose(page,{guests:null,time:null,date:'2026-11-22'});
-    assert.equal(await text(page,'#approvalNote'),'⏳ הזמנה להיום אחרי 16:00 ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.');
+    assert.equal(await text(page,'#approvalNote'),'⏳ הזנת הזמנה בשעה זו מצריכה אישור שלנו. נחזור אליכם בהקדם');
     // stands out in the tablet's "waiting for approval" colours (owner, Nov 2026)
     assert.deepEqual(await page.evaluate(()=>{const c=getComputedStyle(approvalNote);return [c.backgroundColor,c.color];}),['rgb(255, 250, 240)','rgb(138, 90, 0)']);
     await choose(page,{guests:null,time:null,date:'2026-11-25'});
