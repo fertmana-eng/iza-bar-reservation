@@ -4,10 +4,11 @@ One set of rules for all three pages (booking page, personal booking page,
 manager tablet). Owner's request, 23 Nov 2026: "more coherent – fonts, sizes,
 bolding, text colours, boxes". The rules come from what the pages already
 use most; the odd ones out are brought into line. **Status: approved by the owner
-(23 Nov 2026); being applied page by page** (booking page → personal page →
+(23 Nov 2026); applied to the booking page; personal page and manager page
+next** (booking page → personal page →
 manager page), each checked live by the owner.
 
-Every value lives in one shared file, `assets/theme.css` (to be created), as
+Every value lives in one shared file, `assets/theme.css`, as
 named settings (CSS variables). Pages use the names, never raw numbers or
 colour codes, so a change in one place changes everything.
 
