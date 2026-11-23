@@ -98,6 +98,15 @@ Same owner as the IzaZoo management app (repository
   from the IzaZoo app icon (`icon-512.png` in the IzaZoo repo, white IZAZOO
   on #D12026) with a see-through background. Still "עיזה בר": the WhatsApp
   booking card picture (card.js) and the message texts (not asked).
+- **Installable as two phone apps** (owner, 23 Nov 2026): `book.webmanifest`
+  (index.html and booking.html; "הזמנות עיזה בר", cream icon with the red
+  logo, opens the booking page) and `admin.webmanifest` (admin.html; "ניהול
+  עיזה בר", dark green icon with the white logo, scope admin.html only).
+  Icons in `assets/icons/` (192, 512, maskable 512, Apple 180), made from
+  the logo files with Python (script not kept). Chrome's own check: no
+  installability errors. Install from the browser menu ("התקנת
+  אפליקציה" / "הוספה למסך הבית"); there is no install button on the pages.
+  No offline mode (the pages need the internet anyway).
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
@@ -366,7 +375,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (83 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (84 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes:** `tests/visual/screenshots.js` before and after, then
   `tests/visual/compare.js` (`cd tests && npm install` first). Accept only zero
