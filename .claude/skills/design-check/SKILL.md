@@ -7,22 +7,26 @@ description: Visual check for a change that could affect how the reservation pag
 
 Work in plain, non-technical language for the owner (see CLAUDE.md).
 
-1. **Screenshots before and after.** One-time setup: `cd tests && npm install`.
+**Owner, 23 Nov 2026: no screenshots for the owner.** They check every
+change live in the installed apps, so don't send images and don't wait for
+their OK before merging a change they asked for; merge, then tell them what to
+look at. Screenshots are only Claude's own tool, used sparingly:
+
+1. **A change the owner asked for** (new look, size, colour, wording): no
+   before/after set. If the layout could break (overlap, clipping, text
+   wrapping on a narrow phone), take one quick screenshot of that part for
+   yourself and check it; otherwise skip it.
+2. **A change that should NOT change the look** (clean-up, refactor, code
+   moved around): compare before and after, accept only zero differences.
+   One-time setup: `cd tests && npm install`.
    - "Before", on the code without the change (e.g. `git stash`, run, `git stash pop`):
      `node tests/visual/screenshots.js tests/visual/out/before`
    - "After", with the change:
      `node tests/visual/screenshots.js tests/visual/out/after`
    - Compare: `node tests/visual/compare.js tests/visual/out/before tests/visual/out/after`
-   The screenshots cover every booking step and the manager page at phone
-   size (390x844). If the change shows something new, add it to `STATES` in
-   `tests/visual/screenshots.js`. Web fonts are blocked in the screenshots, so
-   they don't show the real font; look at the real page for font questions.
-2. **Judge the differences.**
-   - Not intended → it's a bug; fix it and compare again.
-   - Intended → look at the after screenshot yourself and check: Hebrew text
-     right-aligned and not clipped, spacing and sizes consistent with the rest
-     of the page, colours from the existing palette (CSS variables), nothing
-     overlapping, buttons large enough to tap.
-3. **Show the owner** the before/after of any intended visual change (send the
-   images) and get their OK before merging.
-4. Report in a few lines: screenshots compared, differences found, owner's OK.
+   `ONLY=<regex>` limits the run to the states involved. Web fonts are blocked
+   in the screenshots, so look at the real page for font questions.
+3. **What to check when you look:** Hebrew text right-aligned and not
+   clipped, spacing and sizes consistent with the rest of the page, colours
+   from the existing palette, nothing overlapping, buttons large enough to tap.
+4. Report in one or two lines (no images).
