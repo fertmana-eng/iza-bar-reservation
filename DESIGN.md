@@ -14,9 +14,12 @@ colour codes, so a change in one place changes everything.
 
 ## Header
 
-IZAZOO logo (24 px high) + "//" + **עיזה בר** (24 px, extra bold), both in
-the muted grey (#6b6862, the colour of "ההזמנות שלי"), centred with the logo.
-Same on every page, the tablet included.
+IZAZOO logo (24 px high) + "//" + **עיזה בר** (extra bold), both in the
+muted grey (#6b6862, the colour of "ההזמנות שלי"). **Their letters are exactly
+as tall as the logo's** (20 px of ink) and centred with it: that takes a 36 px
+font for the words and 26 px for "//", because a font size includes empty
+room above and below the letters (measured on the page, 23 Nov 2026). Same on
+every page, the tablet included.
 
 ## Font (decided, applied 23 Nov 2026)
 
