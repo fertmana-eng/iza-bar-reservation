@@ -1,0 +1,19 @@
+{
+  "id": "./admin.html",
+  "name": "עיזה בר – ניהול הזמנות",
+  "short_name": "ניהול עיזה בר",
+  "description": "מסך הערב של עיזה בר: תוכנית, דף הזמנות ואישורים",
+  "start_url": "./admin.html?source=app",
+  "scope": "./admin.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f4ef",
+  "theme_color": "#2f4a3d",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "assets/icons/admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/admin-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

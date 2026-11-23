@@ -384,6 +384,33 @@ describe('customer booking page',()=>{
   });
 });
 
+describe('install as an app (owner, Nov 2026)',()=>{
+  test('each system has its own app settings, name and icons, and opens on its own page',async()=>{
+    for(const [file,man,name,start,icon] of [['','book.webmanifest','הזמנות עיזה בר','./?source=app','book'],
+        ['booking.html#11111111-2222-4333-8444-555555555555','book.webmanifest','הזמנות עיזה בר','./?source=app','book'],
+        ['admin.html','admin.webmanifest','ניהול עיזה בר','./admin.html?source=app','admin']]){
+      const {page,ctx}=await open({file,time:MORNING,cfg:{noSession:true}});
+      const info=await page.evaluate(async()=>{
+        const href=document.querySelector('link[rel=manifest]').getAttribute('href');
+        const m=await (await fetch(href)).json();
+        const base=new URL(href,location.href);
+        const sizes=await Promise.all(m.icons.map(i=>new Promise(r=>{const im=new Image();
+          im.onload=()=>r(im.naturalWidth+'x'+im.naturalHeight+' '+i.purpose);im.onerror=()=>r('missing '+i.src);im.src=new URL(i.src,base);})));
+        const scope=new URL(m.scope,base).href, startUrl=new URL(m.start_url,base).href;
+        const apple=document.querySelector('link[rel=apple-touch-icon]').href;
+        const appleOk=await new Promise(r=>{const im=new Image();im.onload=()=>r(im.naturalWidth===180);im.onerror=()=>r(false);im.src=apple;});
+        return {href,short:m.short_name,start:m.start_url,display:m.display,inScope:startUrl.startsWith(scope),sizes,appleOk,icon:m.icons[0].src};
+      });
+      assert.equal(info.href,man,file||'index.html');
+      assert.equal(info.short,name);assert.equal(info.start,start);assert.equal(info.display,'standalone');
+      assert.ok(info.inScope,'the app opens inside its own scope');
+      assert.deepEqual(info.sizes,['192x192 any','512x512 any','512x512 maskable']);
+      assert.ok(info.appleOk);assert.match(info.icon,new RegExp(`/${icon}-192\\.png$`));
+      await ctx.close();
+    }
+  });
+});
+
 describe('IZAZOO logo',()=>{
   test('the red logo replaces the bar name in the booking pages\' header and sits on the tablet screen (same look everywhere)',async()=>{
     const logo=page=>page.evaluate(()=>[...document.querySelectorAll('img.venue-logo, img.brand-logo')].filter(i=>i.offsetParent)
