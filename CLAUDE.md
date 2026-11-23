@@ -99,7 +99,8 @@ Same owner as the IzaZoo management app (repository
 - **IZAZOO logo** (owner, 22 Nov 2026) in the header of `index.html` and
   `booking.html`, with **"עיזה בר" next to it** (owner, 23 Nov 2026: IZAZOO
   is the group, עיזה בר the business this app belongs to; 24px bold, same
-  height as the logo and centred with it; replaced "הזמנת
+  height as the logo and centred with it; "//" and "עיזה בר" in the grey of
+  "ההזמנות שלי" (#6b6862), the same on the tablet; replaced "הזמנת
   מקומות" / "ההזמנה שלי"); at the start of the tablet's top bar (followed by
   "עיזה בר") and above its login ("עיזה בר · ניהול הזמנות") (red, `assets/izazoo-logo-red.png`; a white copy
   `assets/izazoo-logo-white.png` exists for dark backgrounds). Both were cut
@@ -116,8 +117,8 @@ Same owner as the IzaZoo management app (repository
   אפליקציה" / "הוספה למסך הבית"); there is no install button on the pages.
   No offline mode (the pages need the internet anyway).
 - **Design rules** (owner, 23 Nov 2026: "more coherent – fonts, sizes,
-  bolding, text colours, boxes"): `DESIGN.md`. **Proposed, waiting for the
-  owner's OK**; then a shared `assets/theme.css` and the pages brought into
+  bolding, text colours, boxes"): `DESIGN.md`. **Approved by the owner
+  (23 Nov 2026)**; then a shared `assets/theme.css` and the pages brought into
   line one at a time (booking page → personal page → manager page), each
   checked live by the owner. New work follows `DESIGN.md`. Owner, 23 Nov
   2026: will work more on the overall design first; the health check (first
