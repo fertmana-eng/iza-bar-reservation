@@ -7,8 +7,16 @@ description: Quality check for a change to the table reservation pages. Use afte
 
 Work in plain, non-technical language for the owner (see CLAUDE.md).
 
-1. **Run the behaviour tests:** `node --test tests/app.test.js`. All must pass.
-   If one fails, find the cause and fix it; never weaken or skip a test.
+1. **Run the behaviour tests** (owner, 23 Nov 2026, to save time and tokens):
+   - **Small text, colour or size changes:** run only the related tests,
+     e.g. `node --test --test-name-pattern="logo|header" tests/app.test.js`
+     (pick words from the test names of the part you changed). GitHub's
+     automatic full run (step 6) is the safety net before anything goes live.
+   - **Everything else** (logic, booking rules, the database, the manager
+     page's actions): run all of them, `node --test tests/app.test.js`.
+   Either way all must pass; if one fails, find the cause and fix it; never
+   weaken or skip a test. Read only the summary lines (pass / fail counts and
+   the names of failing tests), not the whole output.
 2. **Cover the change with a test.** If the change fixes a bug or adds
    behaviour, add a test to `tests/app.test.js` that fails without the change
    and passes with it (check both: temporarily undo the change, run the test,

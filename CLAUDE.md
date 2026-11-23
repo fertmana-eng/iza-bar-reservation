@@ -346,6 +346,15 @@ the documents, and how long to keep bookings.
 - **Small changes, one at a time:** one pull request per fix or feature.
 - **Every change gets /qa** (and /design-check or /security-check when they
   apply). Every bug fixed gets a test that would have caught it.
+- **Quicker checks for small changes** (owner, 23 Nov 2026, to save time and
+  tokens): for small text / colour / size changes run only the related tests
+  here and rely on GitHub's automatic full run before going live; run the
+  full set here for logic, booking rules, the database and manager actions.
+  Take a screenshot only when the look changes, one picture, not several.
+  Batch several small requests from the owner into one change when they
+  come together. **Offer /health-check when it fits** (owner: "offer a
+  health check when you think it's appropriate"; never run or schedule it
+  without the owner's yes).
 - **Merge only when the GitHub "Tests" check is green**, then ask the owner to
   check on the phone.
 - **Clean up as you go:** when replacing something, remove the old code in the
