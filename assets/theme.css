@@ -1,0 +1,46 @@
+/* עיזה בר – the shared design settings (DESIGN.md, approved by the owner 23 Nov 2026).
+   Every page uses these names instead of raw sizes and colour codes, so a change here
+   changes all pages. Load after assets/fonts/heebo.css. */
+:root {
+  /* backgrounds and lines */
+  --paper: #f6f4ef;        /* page background, info boxes */
+  --card: #ffffff;         /* boxes, fields */
+  --line: #e4e0d6;         /* borders and dividers */
+
+  /* text */
+  --ink: #1f1e1c;          /* main text */
+  --muted: #6b6862;        /* secondary text, labels, hints, the header's "// עיזה בר" */
+  --faint: #b3ab9c;        /* placeholders, disabled */
+  --accent: #2f4a3d;       /* main buttons, selected items, "יש מקום!" */
+  --on-accent: #ffffff;    /* text on accent / WhatsApp buttons */
+  --danger: #7a2e2e;       /* errors, cancel */
+
+  /* status colours: the same meaning on every page */
+  --wait-ink: #8a5a00;  --wait-bg: #fffaf0;  --wait-line: #e2c27a;   /* waiting for approval */
+  --ok-ink: #1d6b3a;    --ok-bg: #dcefe2;    --ok-line: #b9dcc4;     /* confirmed / arrived */
+  --bad-ink: #7a2e2e;   --bad-bg: #fdf0ef;   --bad-line: #e9c4c1;    /* error / cancelled */
+  --whatsapp: #2fae60;     /* WhatsApp buttons only */
+
+  /* text sizes */
+  --fs-small: 12px;        /* hints, small print */
+  --fs-label: 14px;        /* labels, notes */
+  --fs-body: 16px;         /* normal text, inputs, buttons */
+  --fs-section: 18px;      /* section and panel titles */
+  --fs-title: 22px;        /* the page's main title */
+  --fs-brand: 24px;        /* "עיזה בר" next to the logo */
+  --fs-big: 28px;          /* big numbers on the tablet */
+
+  /* boldness */
+  --w-regular: 400;
+  --w-semi: 600;
+  --w-bold: 800;
+
+  /* corners */
+  --r-control: 10px;       /* buttons, inputs, small choices */
+  --r-box: 14px;           /* boxes, panels */
+  --r-pill: 999px;         /* status tags */
+  --r-sheet: 18px;         /* top corners of the bottom panels */
+
+  /* buttons */
+  --btn-height: 46px;
+}
