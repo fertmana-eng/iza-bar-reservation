@@ -12,8 +12,8 @@ function drawBookingCard(canvas, b) {
   canvas.width = CARD_W; canvas.height = CARD_H;
   const c = canvas.getContext('2d'), ink = '#1c1610', paper = '#f0e8d0', soft = '#5a4f3c', mid = CARD_W / 2;
   const text = (t, y, size, weight, color, maxW = 960) => {
-    let s = size; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`;
-    while (c.measureText(t).width > maxW && s > 20) { s -= 2; c.font = `${weight} ${s}px Heebo, Arial, sans-serif`; }
+    let s = size; c.font = `${weight} ${s}px Rubik, Arial, sans-serif`;
+    while (c.measureText(t).width > maxW && s > 20) { s -= 2; c.font = `${weight} ${s}px Rubik, Arial, sans-serif`; }
     c.fillStyle = color; c.fillText(t, mid, y);
   };
   const dashed = y => { c.save(); c.setLineDash([14, 12]); c.strokeStyle = 'rgba(28,22,16,.35)'; c.lineWidth = 3;

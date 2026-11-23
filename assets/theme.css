@@ -1,6 +1,6 @@
 /* עיזה בר – the shared design settings (DESIGN.md, approved by the owner 23 Nov 2026).
    Every page uses these names instead of raw sizes and colour codes, so a change here
-   changes all pages. Load after assets/fonts/heebo.css. */
+   changes all pages. Load after assets/fonts/rubik.css. */
 :root {
   /* backgrounds and lines */
   --paper: #f6f4ef;        /* page background, info boxes */
@@ -27,9 +27,10 @@
   --fs-body: 16px;         /* normal text, inputs, buttons */
   --fs-section: 18px;      /* section and panel titles */
   --fs-title: 22px;        /* the page's main title */
-  --fs-brand: 36px;        /* "עיזה בר" next to the logo: its letters are as tall as the
-                              logo's (20px of ink; a font size includes room above and below) */
-  --fs-brand-slash: 26px;  /* the "//" between them, same height */
+  --fs-brand: 34px;        /* "עיזה בר" next to the logo: its letters are as tall as the
+                              logo's (20px of ink; a font size includes room above and below;
+                              measured in pixels for Rubik) */
+  --fs-brand-slash: 24px;  /* the "//" between them, same height */
   --fs-big: 28px;          /* big numbers on the tablet */
 
   /* boldness */
@@ -58,6 +59,6 @@
 .venue-name { margin: 0; }
 .venue-logo { display: block; height: 24px; width: auto; }
 .slash-big { font-weight: var(--w-semi); font-size: var(--fs-brand-slash); line-height: 24px; color: var(--muted);
-  display: block; position: relative; top: 1px; }
+  display: block; }
 .venue-tag { color: var(--muted); font-weight: var(--w-bold); font-size: var(--fs-brand); line-height: 24px;
-  white-space: nowrap; display: block; }
+  white-space: nowrap; display: block; position: relative; top: -2px; /* centred with the logo (measured) */ }
