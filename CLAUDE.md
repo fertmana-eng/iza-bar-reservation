@@ -41,11 +41,12 @@ Same owner as the IzaZoo management app (repository
   calendar". The confirmation screen shows only the booking card picture
   (owner: no double presentation); plain text only if the picture can't be
   drawn. No welcome screen: "ההזמנות שלי" and an indoor-only line (outdoor
-  is walk-in only) at the top, a same-day approval note when today is
-  picked between 16:00 and 20:00 (`APPROVAL_FROM`, display only; the
-  database decides; shown as an amber box with ⏳ in the tablet's
-  "waiting for approval" colours; text, owner's wording: "הזנת הזמנה
-  בשעה זו מצריכה אישור שלנו. נחזור אליכם בהקדם"), today greyed out from 20:00, today's times earlier than
+  is walk-in only) at the top; a request waiting for approval (same day,
+  16:00–20:00) gets, **on the confirmation screen only** (owner: "at the
+  end of the process"), above the card, an amber box with ⏳ in the
+  tablet's "waiting for approval" colours, owner's wording: "הזנת הזמנה
+  בשעה זו מחייבת אישור שלנו, נעדכן אתכם בהקדם!" (shown from the
+  database's answer, so it is always right); today greyed out from 20:00, today's times earlier than
   30 minutes ahead greyed out; the search re-checks the clock if the page
   stayed open.
 - **Table or bar** (owner, 23 Nov 2026; `15_seating_and_limits.sql`): a

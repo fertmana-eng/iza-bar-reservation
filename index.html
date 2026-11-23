@@ -61,7 +61,7 @@
 
   .notice { font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: center; margin: -16px 0 20px; }
   /* same "waiting for approval" colours as the manager's tablet (admin.html --pending-*) */
-  #approvalNote { margin: -6px 0 14px; padding: 10px 12px; background: #fffaf0; border: 1px solid #e2c27a;
+  #approvalNote { margin: 0 0 16px; text-align: center; font-size: 15px; line-height: 1.5; padding: 10px 12px; background: #fffaf0; border: 1px solid #e2c27a;
     border-radius: 10px; color: #8a5a00; font-weight: 600; }
 
   /* Table or bar */
@@ -225,8 +225,6 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const stepArea = document.getElementById('stepArea');
 const BOOKING_WINDOW_DAYS = 30;
-// Shown to customers only; the database decides (its 'approval_from' setting is private).
-const APPROVAL_FROM = '16:00';
 const BAR_MAX = 4;
 const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 let pageSettings = null;
@@ -314,8 +312,6 @@ function closedToday(dStr) { const now = israelNow(); return dStr === now.date &
 
 function renderBooking() {
   closeSheet();
-  const now = israelNow();
-  const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
   // the bar takes groups of up to 4; the number is never changed for the customer (owner, Nov 2026)
   const barOver = formData.seating === 'bar' && formData.guests > BAR_MAX;
   const ready = formData.seating && formData.guests && formData.date && formData.time && !barOver;
@@ -334,7 +330,6 @@ function renderBooking() {
       ${box('pickDate', 'תאריך', formData.date ? dateLabel(formData.date) : '')}
       ${box('pickTime', 'שעה', formData.time || '')}
     </div>
-    ${sameDayApproval ? `<p class="notice" id="approvalNote"><span aria-hidden="true">⏳ </span>הזנת הזמנה בשעה זו מצריכה אישור שלנו. נחזור אליכם בהקדם</p>` : ''}
     ${barOver ? `<p class="warning" id="barLimit">בבר אפשר עד ${BAR_MAX} סועדים. הקטינו את מספר הסועדים או בחרו שולחן.</p>` : ''}
     ${warning ? `<p class="warning" id="formWarning">${warning}</p>` : ''}
     ${offerBar ? `<div class="bar-offer" id="barOffer"><p>אין שולחנות פנויים בתאריך הזה, אבל יש מקום בבר.</p>
@@ -557,6 +552,7 @@ async function submitBooking() {
       + (token ? `\nלצפייה, שינוי או ביטול: ${bookingUrl(token)}` : '');
     const waText = encodeURIComponent(shareText);
     stepArea.innerHTML = `
+      ${pending ? '<p id="approvalNote"><span aria-hidden="true">⏳ </span>הזנת הזמנה בשעה זו מחייבת אישור שלנו, נעדכן אתכם בהקדם!</p>' : ''}
       <div class="success">
         <img class="card-preview" id="cardPreview" hidden
           alt="${title}${pending ? ' וממתינה לאישור' : ''}: ${esc(formData.name)}, ${placeText(formData.placed, formData.guests)}, ${formatDisplay(formData.date)} בשעה ${formData.time}">
