@@ -113,6 +113,11 @@ Same owner as the IzaZoo management app (repository
   installability errors. Install from the browser menu ("התקנת
   אפליקציה" / "הוספה למסך הבית"); there is no install button on the pages.
   No offline mode (the pages need the internet anyway).
+- **Design rules** (owner, 23 Nov 2026: "more coherent – fonts, sizes,
+  bolding, text colours, boxes"): `DESIGN.md`. **Proposed, waiting for the
+  owner's OK**; then a shared `assets/theme.css` and the pages brought into
+  line one at a time (booking page → personal page → manager page), each
+  checked live by the owner. New work follows `DESIGN.md`.
 - `booking.html#<secret>`: the customer's own booking (see Next steps).
   `sw.js`: the notification helper it registers (step 4).
   `card.js` draws the booking card for both customer pages.
