@@ -187,6 +187,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="card.js"></script>
+<script src="assets/back.js"></script>
 <script>
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -201,6 +202,22 @@ let viewMonth, minDate, maxDate;
 let warning = null;    // shown under the three boxes
 let found = false;     // there is room for the chosen guests and date: the details form is open
 let offerBar = false;  // table chosen, no table left, but the bar has room
+let doneScreen = false; // the confirmation screen is showing
+// The back button, one step at a time: an open panel closes; then the details form or the
+// confirmation screen goes back to the search (after a booking: a fresh, empty search).
+const syncBack = backSteps(
+  () => (found || doneScreen ? 1 : 0) + (document.getElementById('sheet') ? 1 : 0),
+  () => {
+    if (document.getElementById('sheet')) closeSheet();
+    else if (doneScreen) startOver();
+    else if (found) { found = false; renderBooking(); }
+  });
+function startOver() {
+  doneScreen = false; found = false; offerBar = false; warning = null;
+  Object.assign(formData, { seating: null, placed: null, guests: null, date: null, time: null, note: '', bookingId: null, pending: false });
+  renderBooking();
+  window.scrollTo(0, 0);
+}
 
 const formData = { seating: null, placed: null, date: null, time: null, name: '', phone: '', guests: null, note: '', bookingId: null, pending: false };
 
@@ -317,6 +334,7 @@ function renderBooking() {
   });
   if (found) bindDetails();
   else document.getElementById('findBtn').addEventListener('click', findPlace);
+  syncBack();
 }
 // Any change to guests, date or time means a new search.
 function choiceChanged() { found = false; offerBar = false; warning = null; renderBooking(); }
@@ -330,10 +348,11 @@ function openSheet(title, body, bind) {
     <div class="sheet-head"><span class="sheet-title">${title}</span><button type="button" class="sheet-close" id="sheetClose" aria-label="סגירה">✕</button></div>
     <div class="sheet-body"></div></div>`;
   document.body.appendChild(el);
-  el.addEventListener('click', e => { if (e.target === el) closeSheet(); });
-  el.querySelector('#sheetClose').addEventListener('click', closeSheet);
+  el.addEventListener('click', e => { if (e.target === el) { closeSheet(); syncBack(); } });
+  el.querySelector('#sheetClose').addEventListener('click', () => { closeSheet(); syncBack(); });
   const fill = () => { el.querySelector('.sheet-body').innerHTML = body(); bind(el, fill); };
   fill();
+  syncBack();
 }
 function closeSheet() { const s = document.getElementById('sheet'); if (s) s.remove(); }
 
@@ -540,6 +559,7 @@ async function submitBooking() {
       ${token ? `<a class="btn-outline" id="manageLink" href="booking.html#${encodeURIComponent(token)}">ניהול ההזמנה</a>` : ''}
     `;
     if (!pending && !IS_ANDROID) document.getElementById('icsBtn').addEventListener('click', downloadIcs);
+    doneScreen = true; syncBack();
     prepareCard();
   } else if (result === 'bar_available') {
     found = false; offerBar = true; warning = null;

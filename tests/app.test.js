@@ -386,6 +386,55 @@ describe('customer booking page',()=>{
   });
 });
 
+describe('the phone\'s back button goes back one step (owner, Nov 2026)',()=>{
+  const here=page=>page.evaluate(()=>location.pathname.split('/').pop());
+  test('booking page: back closes a panel, then the form, and after booking starts a fresh search',async()=>{
+    const {page,ctx,errors}=await open({time:MORNING});
+    await page.click('[data-seating="table"]');
+    await page.click('#pickGuests');await page.waitForSelector('#sheet');
+    await page.goBack();await page.waitForFunction(()=>!document.getElementById('sheet'));
+    assert.equal(await here(page),'','still on the booking page');
+    // choosing in a panel closes it without leaving a step behind
+    await choose(page,{seating:null});
+    assert.equal(await page.evaluate(()=>history.state),null);
+    await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    await page.goBack();await page.waitForFunction(()=>!document.getElementById('submitBtn'));
+    assert.match(await text(page,'#pickGuests'),/3 סועדים/,'the choices are kept');
+    assert.equal(await page.isVisible('#findBtn'),true);
+    // a panel opened over the form: back closes only the panel
+    await page.click('#findBtn');await page.waitForSelector('#submitBtn');
+    await page.click('#pickTime');await page.waitForSelector('#sheet');
+    await page.goBack();await page.waitForFunction(()=>!document.getElementById('sheet'));
+    assert.equal(await page.isVisible('#submitBtn'),true,'the form is still open');
+    // after booking, back gives a fresh, empty booking screen
+    await page.fill('#nameInput','דנה כהן');await page.fill('#phoneInput','050-1234567');
+    await page.click('#submitBtn');await page.waitForSelector('.success');
+    await page.goBack();await page.waitForSelector('#findBtn');
+    assert.equal(await page.isVisible('.success'),false);
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.pick')].map(b=>b.innerText.replace(/\s+/g,' ').trim())),['סועדים ▾','תאריך ▾','שעה ▾']);
+    assert.ok(await page.isVisible('#myBookings'),'the new booking is under "my bookings"');
+    assert.equal(await here(page),'');
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+  test('closing a panel with ✕ also removes its step, so the next back does not land on it',async()=>{
+    const {page,ctx}=await open({time:MORNING});
+    await page.click('#pickDate');await page.click('#sheetClose');
+    assert.equal(await page.evaluate(()=>history.state),null);await ctx.close();
+  });
+  test('manager page: back closes the side panel and cancels choosing a table to move to',async()=>{
+    const {page,ctx,errors}=await open({file:'admin.html',time:MORNING,viewport:{width:1280,height:800},cfg:{reservations:[
+      {id:1,reservation_date:'2026-11-22',arrival_time:'19:00:00',customer_name:'רון',phone:'052-1111111',guests:2,note:null,assigned_table_id:1,assigned_kind:'table',status:'confirmed'}]}});
+    await page.waitForSelector('#plan .tbl[data-table="1"]');
+    await page.click('#plan .tbl[data-table="1"]');await page.waitForSelector('#panel');
+    await page.goBack();await page.waitForFunction(()=>!document.getElementById('panel'));
+    assert.equal(await here(page),'admin.html');
+    await page.click('#plan .tbl[data-table="1"]');await page.click('#moveBtn');await page.waitForSelector('#moveBanner');
+    await page.goBack();await page.waitForFunction(()=>!document.getElementById('moveBanner'));
+    assert.equal(await here(page),'admin.html');
+    assert.deepEqual(errors,[]);await ctx.close();
+  });
+});
+
 describe('install as an app (owner, Nov 2026)',()=>{
   test('each system has its own app settings, name and icons, and opens on its own page',async()=>{
     for(const [file,man,name,start,icon] of [['','book.webmanifest','הזמנות עיזה בר','./?source=app','book'],
