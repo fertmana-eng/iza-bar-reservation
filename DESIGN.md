@@ -16,10 +16,13 @@ colour codes, so a change in one place changes everything.
 IZAZOO logo (24 px high) + a light "//" + **עיזה בר** (24 px, extra bold,
 dark), centred with the logo. Same on every page.
 
-## Font
+## Font (decided, applied 23 Nov 2026)
 
-The phone's own font (system font) everywhere: fast and clear in Hebrew.
-Heebo only inside the booking card picture.
+**Heebo** everywhere (owner's choice after a side-by-side preview with
+Assistant and Rubik), so the app looks the same on every phone; the booking
+card picture uses it too. Stored on our own site (`assets/fonts/`, Hebrew and
+Latin parts, every weight in one file, licence `OFL-Heebo.txt`), not loaded
+from Google. Fallback while it loads on the first visit: Arial.
 
 ## Text sizes (6, instead of 13 today)
 
