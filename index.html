@@ -107,16 +107,11 @@
   .summary-label { color: var(--ink-soft); }
   .summary-value { font-weight: 600; }
 
-  .intro-copy { margin: 20px 0 26px; }
-  .intro-copy p {
-    font-size: 15.5px;
-    line-height: 1.65;
-    text-align: center;
-    color: var(--ink);
-    margin: 0 0 14px;
-  }
-  .intro-copy p:last-child { margin-bottom: 0; }
-  .intro-subtitle { color: var(--ink); font-size: 21px; font-weight: 700; margin: 2px 0 24px; }
+  .notice { font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: center; margin: -16px 0 20px; }
+  #approvalNote { margin: 16px 0 0; color: var(--ink); }
+  .rules { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 16px; }
+  .rules p { font-size: 14px; line-height: 1.55; color: var(--ink); margin: 0 0 6px; }
+  .rules p:last-child { margin-bottom: 0; }
 
   .step-label { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin: 0 0 6px; }
   .step-question { font-size: 21px; font-weight: 700; margin: 0 0 24px; }
@@ -266,6 +261,8 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const stepArea = document.getElementById('stepArea');
 const progressEl = document.getElementById('progress');
 const BOOKING_WINDOW_DAYS = 30;
+// Shown to customers only; the database decides (its 'approval_from' setting is private).
+const APPROVAL_FROM = '16:00';
 const WEEKDAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 const STEPS = ['date', 'guests', 'time', 'details', 'extra'];
 const STEP_LABELS = { date: 'תאריך', guests: 'סועדים', time: 'שעה', details: 'פרטים', extra: 'סיום' };
@@ -396,32 +393,17 @@ async function init() {
   if (now.time > pageSettings.cutoff) initial.setDate(initial.getDate() + 1);
   viewMonth = new Date(initial.getFullYear(), initial.getMonth(), 1);
 
-  renderIntro();
+  stepIndex = 0;
+  renderStep();
 }
 
-function renderIntro() {
-  progressEl.innerHTML = '';
+// Upcoming bookings this phone made, shown at the top of the first step.
+function myBookingsHtml() {
   const mine = myBookings().filter(b => b.date >= todayStr()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  stepArea.innerHTML = `
-    ${mine.length ? `<div class="my-bookings" id="myBookings">
+  return mine.length ? `<div class="my-bookings" id="myBookings">
       <p class="my-title">ההזמנות שלי</p>
       ${mine.map(b => `<a class="my-booking" href="booking.html#${encodeURIComponent(b.token)}">${formatDisplay(b.date)} · ${esc(b.time)} · ${Number(b.guests)} סועדים<span>לצפייה ושינוי ‹</span></a>`).join('')}
-    </div>` : ''}
-    <p class="step-question" style="margin-bottom:4px;">איזה כיף שחשבתם עלינו 🙌</p>
-    <p class="intro-subtitle">רק כמה דברים לפני שמתחילים...</p>
-    <div class="intro-copy">
-      <p>הזמנת מקומות אצלנו בפנים בלבד, בין השעות <span dir="ltr" style="white-space:nowrap;">17:00–21:00</span>.</p>
-      <p>הישיבה בחוץ היא על בסיס מקום פנוי - אין אופציה להזמין מראש, פשוט מגיעים וממתינים שיתפנה שולחן 🙂</p>
-      <p>הזמנות לאותו היום: עד 16:00 ההזמנה מאושרת מיד. בין 16:00 ל-20:00 נאשר אותה מולכם בוואטסאפ. אחרי 20:00 כבר לא ניתן להזמין להיום.</p>
-      <p>נוכל לחכות למאחרים עד 15 דקות משעת ההזמנה - לאחר מכן לא נוכל להתחייב שהמקום ישמר לכם, עמכם הסליחה 🙏</p>
-      <p>קחו בבקשה בחשבון שבמידה והקדמתם, ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
-    </div>
-    <button type="button" class="primary" id="introNext">יאללה בואו נתחיל</button>
-  `;
-  document.getElementById('introNext').addEventListener('click', () => {
-    stepIndex = 0;
-    renderStep();
-  });
+    </div>` : '';
 }
 
 function renderStep() {
@@ -444,12 +426,14 @@ function renderDateStep() {
   const prevDisabled = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 0) < minDate;
   const nextDisabled = nextMonth > maxDate;
 
+  const now = israelNow();
+  const sameDayApproval = formData.date === now.date && now.time >= APPROVAL_FROM && now.time <= pageSettings.cutoff;
   let cells = '';
   for (let i = 0; i < startWeekday; i++) cells += '<div></div>';
   for (let day = 1; day <= daysInMonth; day++) {
     const d = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
     const dStr = toDateStr(d);
-    const disabled = d < minDate || d > maxDate;
+    const disabled = d < minDate || d > maxDate || (dStr === now.date && now.time > pageSettings.cutoff);
     const classes = [];
     if (dStr === todayStr()) classes.push('today');
     if (dStr === formData.date) classes.push('selected');
@@ -457,7 +441,9 @@ function renderDateStep() {
   }
 
   stepArea.innerHTML = `
+    ${myBookingsHtml()}
     <p class="step-question">מתי מגיעים?</p>
+    <p class="notice" id="indoorNote">הזמנה לישיבה בפנים בלבד.<br>בחוץ ללא הזמנה, לפי מקום פנוי.</p>
     <div class="cal-head">
       <button type="button" class="cal-nav" id="prevMonth" ${prevDisabled ? 'disabled' : ''}>‹</button>
       <span class="cal-month">${monthLabel}</span>
@@ -465,6 +451,7 @@ function renderDateStep() {
     </div>
     <div class="cal-weekdays">${WEEKDAY_LETTERS.map(l => `<div>${l}</div>`).join('')}</div>
     <div class="cal-grid">${cells}</div>
+    ${sameDayApproval ? `<p class="notice" id="approvalNote">הזמנה להיום אחרי ${APPROVAL_FROM} ממתינה לאישור שלנו. נעדכן אתכם בוואטסאפ.</p>` : ''}
     ${dateWarning ? `<p class="warning">${dateWarning}</p>` : ''}
     <button type="button" class="primary" id="dateNext" ${formData.date ? '' : 'disabled'}>לבחירת כמות סועדים</button>
   `;
@@ -656,6 +643,10 @@ function renderExtraStep() {
     <div class="field">
       <label for="noteInput">הערה (לא חובה)</label>
       <textarea id="noteInput" rows="2" maxlength="300" placeholder="לדוגמה: יום הולדת, כיסא תינוק...">${esc(formData.note)}</textarea>
+    </div>
+    <div class="rules" id="rules">
+      <p>נחכה למאחרים עד 15 דקות משעת ההזמנה. אחר כך לא נוכל להתחייב שהמקום יישמר לכם 🙏</p>
+      <p>הקדמתם? ייתכן שתצטרכו להמתין שהמקום שלכם יתפנה.</p>
     </div>
     <div id="submitError" class="error" style="display:none;"></div>
     <button type="button" class="primary" id="submitBtn">שריינו לי שולחן</button>
