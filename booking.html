@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-title" content="הזמנות עיזה בר">
 <meta name="referrer" content="no-referrer">
 <title>ההזמנה שלי</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/heebo.css">
 <style>
+  button, input, select, textarea { font-family: inherit; }
   /* Same look as the manager's tablet screen (admin.html): light background, white
-     rounded boxes, dark green buttons, the system font, the red IZAZOO logo.
-     (Heebo is still loaded: the booking card picture is drawn with it.) */
+     rounded boxes, dark green buttons, the red IZAZOO logo, and one font on every
+     phone: Heebo, from our own site (assets/fonts/heebo.css; also the card's font). */
   :root {
     --paper: #f6f4ef;
     --card: #ffffff;
@@ -31,7 +31,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+  body { font-family: 'Heebo', Arial, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
   .header-band { background: var(--paper); border-bottom: 1px solid var(--line); padding: 14px 20px; text-align: center; }
   .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .venue-name { margin: 0; }

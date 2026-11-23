@@ -91,9 +91,11 @@ Same owner as the IzaZoo management app (repository
 - **Customer pages look like the tablet screen** (owner, 22 Nov 2026):
   `index.html` and `booking.html` use the manager page's palette (light
   #f6f4ef background, white rounded boxes, #e4e0d6 lines, dark green
-  #2f4a3d buttons, the system font) with the red IZAZOO logo in a light
-  header. Heebo is still loaded only because the booking card picture uses
-  it. The card picture itself (card.js) keeps the old black/cream look.
+  #2f4a3d buttons) with the red IZAZOO logo in a light header. **One font,
+  Heebo, on all pages and the card** (owner, 23 Nov 2026: the same look on
+  every phone; chosen over Assistant / Rubik from a preview), our own copy in
+  `assets/fonts/heebo.css` (no Google Fonts any more). The card picture
+  itself (card.js) keeps the old black/cream look.
 - **IZAZOO logo** (owner, 22 Nov 2026) in the header of `index.html` and
   `booking.html`, with **"עיזה בר" next to it** (owner, 23 Nov 2026: IZAZOO
   is the group, עיזה בר the business this app belongs to; 24px bold, same
@@ -330,8 +332,8 @@ the owner before merging). Before opening, in this order:
    proof of damage are common in Israel.
 4. **Keep data only as long as needed:** delete name / phone some time after
    the visit (owner to choose 30 / 90 / 365 days; database change).
-5. **Remove outside services that see visitors** (Google Fonts for Heebo,
-   jsDelivr for supabase-js): host our own copies.
+5. **Remove outside services that see visitors**: Google Fonts done (23 Nov
+   2026, Heebo is our own copy); jsDelivr for supabase-js still to do.
 6. **Written security procedure** for the database (Data Security
    Regulations 2017, basic level): one page.
 7. **Lawyer review** of the privacy notice, terms and accessibility
@@ -403,7 +405,7 @@ Tests live in `tests/` (see `tests/README.md`). They run in headless Chromium
 against a fake database (`tests/fake-supabase.js`), never the real project,
 with a fixed clock in Israel time.
 
-- **Behaviour tests:** `node --test tests/app.test.js` (84 tests). Run after
+- **Behaviour tests:** `node --test tests/app.test.js` (85 tests). Run after
   every change; add a test for every bug fixed.
 - **Styling changes that should not change the look** (clean-ups):
   `tests/visual/screenshots.js` before and after, then `tests/visual/compare.js`
