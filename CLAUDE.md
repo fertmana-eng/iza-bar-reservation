@@ -179,11 +179,12 @@ Same owner as the IzaZoo management app (repository
   only the publishable key that is in the page anyway). Address:
   https://fertmana-eng.github.io/iza-bar-reservation/ (manager page:
   `admin.html`). The old copies: **Cloudflare** deleted by the owner (22 Nov
-  2026). **Netlify** (project `remarkable-twilight-87b52c`, marked "Private",
-  so only the owner's Netlify team can open it) is still connected: its new
-  layout shows no delete button on the phone or in desktop view, so it was
-  left for now. Harmless; delete it some time from a computer (or remove
-  Netlify's access to this repository in GitHub → Settings → Applications).
+  2026). **Netlify** (project `remarkable-twilight-87b52c`) deleted
+  by Claude with the owner's OK through Netlify's API (23 Nov 2026; it was
+  emailing the owner about every change). The owner's Netlify account still
+  has an unrelated project `zippy-sprite-5d7768` (not linked to this
+  repository; left alone). The Netlify GitHub app may still be installed on
+  the owner's GitHub account (harmless now).
 - Database changes are kept in `supabase/migrations/`. The four
   original SQL files (`supabase/migrations/01_…04_`) were run by hand in the
   SQL Editor; they may not match the real database exactly (see below).
