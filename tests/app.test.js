@@ -678,17 +678,23 @@ describe('manager page (floor plan and evening sheet)',()=>{
 });
 
 describe('personal booking page (booking.html#secret)',()=>{
-  test('a change can switch between table and bar (the bar takes up to 4)',async()=>{
+  // Owner, Nov 2026: the number of guests is never changed for the customer; a message explains the bar's limit
+  test('a change can switch between table and bar; a group over 4 is told, and its number is kept',async()=>{
     const T='11111111-2222-4333-8444-555555555555';
     const {page,ctx,errors}=await open({time:MORNING,file:'booking.html#'+T,cfg:{bookings:[{access_token:T,id:7,status:'confirmed',
       reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:6,note:null,can_change:true,can_cancel:true,seating:'table'}]}});
     await page.waitForSelector('#seatingInput');
     assert.equal(await page.inputValue('#seatingInput'),'table');
-    assert.equal(await page.isVisible('#barHint'),false);
+    assert.equal(await page.isVisible('#barLimit'),false);
     await page.selectOption('#seatingInput','bar');
-    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#guestsInput option')].map(o=>+o.value)),[1,2,3,4]);
-    assert.equal(await page.inputValue('#guestsInput'),'4','6 guests can not sit at the bar: 4');
-    assert.ok(await page.isVisible('#barHint'));
+    assert.equal(await page.inputValue('#guestsInput'),'6','the number is not changed');
+    assert.equal(await text(page,'#barLimit'),'בבר אפשר עד 4 סועדים. הקטינו את מספר הסועדים או בחרו שולחן.');
+    assert.equal(await page.isDisabled('#saveChange'),true);
+    // choosing a table again, or fewer guests, clears the message
+    await page.selectOption('#seatingInput','table');
+    assert.equal(await page.isVisible('#barLimit'),false);assert.equal(await page.isEnabled('#saveChange'),true);
+    await page.selectOption('#seatingInput','bar');await page.selectOption('#guestsInput','4');
+    assert.equal(await page.isVisible('#barLimit'),false);
     await page.click('#saveChange');await page.waitForSelector('#msg');
     const [call]=await rpcCalls(page,'change_booking');
     assert.deepEqual(call.args,{p_token:T,p_date:'2026-11-25',p_time:'19:00',p_guests:4,p_seating:'bar'});
@@ -705,13 +711,13 @@ describe('personal booking page (booking.html#secret)',()=>{
     await page.selectOption('#seatingInput','table');await page.click('#saveChange');await page.waitForSelector('#msg');
     assert.match(await text(page,'#msg'),/אין שולחן פנוי בשינוי הזה, אבל יש מקום בבר/);await ctx.close();
   });
-  test('a bar booking says "בבר" and can be changed to at most 4 guests',async()=>{
+  test('a bar booking says "בבר", and a change onto an evening already booked is explained',async()=>{
     const T='11111111-2222-4333-8444-555555555555';
     const {page,ctx,errors}=await open({time:MORNING,file:'booking.html#'+T,cfg:{changeResult:'duplicate',bookings:[{access_token:T,id:7,status:'confirmed',
       reservation_date:'2026-11-25',arrival_time:'19:00:00',customer_name:'דנה',guests:2,note:null,can_change:true,can_cancel:true,seating:'bar'}]}});
     await page.waitForSelector('#cardPreview:not([hidden])');
     assert.match(await page.getAttribute('#cardPreview','alt'),/דנה, בבר, ל-2 סועדים/);
-    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#guestsInput option')].map(o=>+o.value)),[1,2,3,4]);
+    assert.equal(await page.inputValue('#seatingInput'),'bar');
     await page.fill('#dateInput','2026-11-26');await page.click('#saveChange');await page.waitForSelector('#msg');
     assert.match(await text(page,'#msg'),/כבר יש הזמנה אחרת על מספר הטלפון הזה בערב הזה/);
     assert.deepEqual(errors,[]);await ctx.close();

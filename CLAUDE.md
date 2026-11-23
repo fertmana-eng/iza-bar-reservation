@@ -56,8 +56,10 @@ Same owner as the IzaZoo management app (repository
   ל-3 סועדים" / "בבר, ל-2 סועדים", `placeText()` in card.js). On the
   personal page a change can also switch table ↔ bar (owner, 23 Nov 2026;
   `16_change_seating.sql`, `change_booking(..., p_seating)`): an "איפה"
-  select next to date / time / guests; bar → guests 1–4 (a bigger number
-  becomes 4) with a hint; switching to a table when none is left answers
+  select next to date / time / guests; **the number of guests is never
+  changed for the customer** (owner): bar with more than 4 shows "בבר אפשר
+  עד 4 סועדים. הקטינו את מספר הסועדים או בחרו שולחן." and saving waits;
+  switching to a table when none is left answers
   'bar_available' ("אין שולחן פנוי... אבל יש מקום בבר"). Without a choice
   a change keeps the area. Manager bookings are unaffected.
 - **Double bookings** (owner, 23 Nov 2026; same file): one booking per phone

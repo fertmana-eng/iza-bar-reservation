@@ -248,9 +248,10 @@ function render() {
           <div class="field"><label for="seatingInput">איפה</label><select id="seatingInput">
             <option value="table" ${b.seating !== 'bar' ? 'selected' : ''}>שולחן</option>
             <option value="bar" ${b.seating === 'bar' ? 'selected' : ''}>בר</option></select></div>
-          <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput"></select></div>
+          <div class="field"><label for="guestsInput">סועדים</label><select id="guestsInput">
+            ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i + 1 === b.guests ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
         </div>
-        <p class="hint" id="barHint" hidden>בבר: עד 4 סועדים בהזמנה</p>
+        <p class="msg err" id="barLimit" hidden>בבר אפשר עד 4 סועדים. הקטינו את מספר הסועדים או בחרו שולחן.</p>
         <button type="button" class="btn-outline" id="saveChange">שמירת השינויים</button>
       </div>
       <div class="field">
@@ -272,8 +273,7 @@ function render() {
   document.getElementById('pushBtn')?.addEventListener('click', enablePush);
   if (b.can_change) {
     fillTimes(b.arrival_time.slice(0, 5));
-    fillGuests(b.guests);
-    document.getElementById('seatingInput').addEventListener('change', () => fillGuests(Number(document.getElementById('guestsInput').value)));
+    for (const id of ['seatingInput', 'guestsInput']) document.getElementById(id).addEventListener('change', checkBarLimit);
     document.getElementById('dateInput').addEventListener('change', () => fillTimes(document.getElementById('timeInput').value));
     document.getElementById('saveChange').addEventListener('click', saveChange);
   }
@@ -293,12 +293,12 @@ async function drawCard() {
   } catch (e) { /* the status line and buttons are enough without the picture */ }
 }
 
-// The bar takes groups of 1-4 (as on the booking page): a bigger group switching to the bar becomes 4
-function fillGuests(keep) {
-  const bar = document.getElementById('seatingInput').value === 'bar', max = bar ? 4 : 10, sel = document.getElementById('guestsInput');
-  const value = Math.min(keep, max);
-  sel.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}" ${i + 1 === value ? 'selected' : ''}>${i + 1}</option>`).join('');
-  document.getElementById('barHint').hidden = !bar;
+// The bar takes groups of 1-4. The number is never changed for the customer (owner, Nov 2026):
+// a bigger group choosing the bar sees why, and saving waits until they lower it or choose a table.
+function checkBarLimit() {
+  const over = document.getElementById('seatingInput').value === 'bar' && Number(document.getElementById('guestsInput').value) > 4;
+  document.getElementById('barLimit').hidden = !over;
+  document.getElementById('saveChange').disabled = over || !document.getElementById('timeInput').value;
 }
 
 function fillTimes(keep) {
@@ -306,6 +306,7 @@ function fillTimes(keep) {
   sel.innerHTML = times.length ? times.map(t => `<option ${t === keep ? 'selected' : ''}>${t}</option>`).join('')
     : '<option value="">אין שעות</option>';
   document.getElementById('saveChange').disabled = !times.length;
+  if (document.getElementById('barLimit')) checkBarLimit();
 }
 
 async function saveChange() {
