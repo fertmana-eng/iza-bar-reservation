@@ -195,8 +195,9 @@ begin
     then failed:=failed||'a change can move onto an evening the phone already booked'::text; end if;
   total:=total+1;
   perform set_config('request.headers','{"x-forwarded-for":"203.0.113.9, 10.0.0.1"}',true);
-  select string_agg((public.book_reservation(d+2,'19:00','בדיקת קצב',ph,2,null,null)).result,',') into ok_list
-    from unnest(array['053-3000001','053-3000002','053-3000003','053-3000004']) ph;
+  select string_agg(b.result,',' order by ph) into ok_list
+    from unnest(array['053-3000001','053-3000002','053-3000003','053-3000004']) ph
+    cross join lateral public.book_reservation(d+2,'19:00','בדיקת קצב',ph,2,null,null) b;
   perform set_config('request.headers','{"x-forwarded-for":"198.51.100.7"}',true);
   select ok_list||','||(public.book_reservation(d+2,'19:00','בדיקת קצב','053-3000005',2,null,null)).result into ok_list;
   perform set_config('request.headers','',true);
